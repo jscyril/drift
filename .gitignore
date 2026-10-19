@@ -1,0 +1,4 @@
+# throwaway preview harnesses
+_test/
+_locktest*.qml
+.qmlls.ini
