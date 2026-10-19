@@ -18,8 +18,8 @@ Pixel fonts, staircase corners, neon gradient meters, and colors pulled live fro
 - [Screenshots](#screenshots)
 - [Requirements](#requirements)
 - [Install](#install)
+- [The drift command](#the-drift-command)
 - [Keybinds (niri)](#keybinds-niri)
-- [IPC reference](#ipc-reference)
 - [Configuration](#configuration)
 - [Battery life](#battery-life)
 - [Project layout](#project-layout)
@@ -139,57 +139,85 @@ Optional: `vicinae` as the launcher (any command works).
 
 ## Install
 
+### Arch (AUR-style package)
+
 ```sh
-git clone https://github.com/jscyril/drift ~/.config/quickshell/drift
-# install Departure Mono into ~/.local/share/fonts, then:
-fc-cache -f
-qs -c drift -d
+git clone https://github.com/jscyril/drift
+cd drift/packaging/arch
+makepkg -si
 ```
 
-Start it with niri by adding this to `~/.config/niri/config.kdl`:
+This builds `drift-shell-git`, pulls in every dependency (including both fonts from the AUR, so use an AUR helper or install those two first), installs drift to `/etc/xdg/quickshell/drift` and puts the `drift` command in `/usr/bin`. Updates come with `makepkg -si` again (or your AUR helper once it's published).
+
+### Any distro: install script
+
+```sh
+git clone https://github.com/jscyril/drift
+cd drift
+./install.sh            # links this folder to ~/.config/quickshell/drift
+./install.sh --copy     # or copy it, so the clone can be deleted
+```
+
+It checks for missing programs (and prints the Arch package names), downloads the two fonts if needed, and installs the `drift` command to `~/.local/bin`.
+
+### Start it
+
+```sh
+drift
+```
+
+Autostart with niri by adding this to `~/.config/niri/config.kdl`:
 
 ```kdl
-spawn-at-startup "qs" "-c" "drift" "-d"
+spawn-at-startup "drift"
 spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
 ```
 
-Edits to any `.qml` file hot-reload instantly.
+A copy in `~/.config/quickshell/drift` always takes priority over the system one, and edits to any `.qml` file hot-reload instantly.
+
+## The `drift` command
+
+```
+drift                   start in the background (no-op if already running)
+drift restart | stop | status | logs [-f]
+
+drift lock              lock the screen
+drift session           session menu (lock / screen off / sleep / log out / reboot / power off)
+drift capture           screenshot & recording menu
+drift clipboard         clipboard history
+drift settings [page]   settings app: look wallpaper bar clock notifications network
+                        bluetooth sound displays power data about
+drift toggle <panel>    bar panel: quick media today system screen github updates
+
+drift volume up|down|mute
+drift mic mute
+drift brightness up|down
+drift updates           re-check for package updates
+drift ipc <fn> [args]   call any IPC function directly
+```
+
+Set `DRIFT_DIR=/path/to/drift` to run a checkout from anywhere.
 
 ## Keybinds (niri)
 
 ```kdl
 binds {
-    Mod+Z         { spawn "qs" "-c" "drift" "ipc" "call" "drift" "session"; }
-    Super+Alt+L   { spawn-sh "qs -c drift ipc call drift lock || loginctl lock-session"; }
-    Mod+Alt+V     { spawn "qs" "-c" "drift" "ipc" "call" "drift" "clipboard"; }
-    Print         { spawn "qs" "-c" "drift" "ipc" "call" "drift" "capture"; }
-    Mod+Shift+X   { spawn "qs" "-c" "drift" "ipc" "call" "drift" "capture"; }
+    Mod+Z         { spawn "drift" "session"; }
+    Super+Alt+L   { spawn "drift" "lock"; }
+    Mod+Alt+V     { spawn "drift" "clipboard"; }
+    Print         { spawn "drift" "capture"; }
+    Mod+Shift+X   { spawn "drift" "capture"; }
 
-    XF86AudioRaiseVolume  allow-when-locked=true { spawn "qs" "-c" "drift" "ipc" "call" "drift" "volumeUp"; }
-    XF86AudioLowerVolume  allow-when-locked=true { spawn "qs" "-c" "drift" "ipc" "call" "drift" "volumeDown"; }
-    XF86AudioMute         allow-when-locked=true { spawn "qs" "-c" "drift" "ipc" "call" "drift" "volumeMute"; }
-    XF86AudioMicMute      allow-when-locked=true { spawn "qs" "-c" "drift" "ipc" "call" "drift" "micMute"; }
-    XF86MonBrightnessUp   allow-when-locked=true { spawn "qs" "-c" "drift" "ipc" "call" "drift" "brightnessUp"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn "qs" "-c" "drift" "ipc" "call" "drift" "brightnessDown"; }
+    XF86AudioRaiseVolume  allow-when-locked=true { spawn "drift" "volume" "up"; }
+    XF86AudioLowerVolume  allow-when-locked=true { spawn "drift" "volume" "down"; }
+    XF86AudioMute         allow-when-locked=true { spawn "drift" "volume" "mute"; }
+    XF86AudioMicMute      allow-when-locked=true { spawn "drift" "mic" "mute"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn "drift" "brightness" "up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "drift" "brightness" "down"; }
 }
 ```
 
-For hypridle, point `lock_cmd` / `before_sleep_cmd` at `qs -c drift ipc call drift lock`.
-
-## IPC reference
-
-Everything is reachable through `qs -c drift ipc call drift <function> [arg]`:
-
-| Function | Does |
-|---|---|
-| `toggle <card>` | open/close a panel: `quick` `media` `today` `system` `screen` `github` `updates` (`settings` opens the app) |
-| `settings <page>` | open the settings app on a page: `look` `wallpaper` `bar` `clock` `notifications` `network` `bluetooth` `sound` `displays` `power` `data` `about` |
-| `session` | session menu |
-| `capture` | capture menu |
-| `clipboard` | clipboard history |
-| `lock` | lock the session |
-| `volumeUp` `volumeDown` `volumeMute` `micMute` `brightnessUp` `brightnessDown` | change the value and show the pop-up |
-| `updatesRefresh` | re-check for updates |
+For hypridle, set `lock_cmd = drift lock` (and use it for `before_sleep_cmd` too).
 
 ## Configuration
 
@@ -227,6 +255,9 @@ Measured on a Ryzen 5 4600H laptop: about **1% of one core** in power saver, ver
 
 ```
 shell.qml           entry: bars per screen, overlays, IPC
+bin/drift           the drift command
+install.sh          installer for git clones
+packaging/arch/     PKGBUILD (drift-shell-git)
 Bar.qml             the bar + drop-down panels
 SessionMenu.qml     CaptureMenu.qml  ClipboardMenu.qml  Osd.qml
 Lock.qml            session lock + PAM;  LockContent.qml is what it draws
