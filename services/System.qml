@@ -146,6 +146,7 @@ Singleton {
 
     // ── session ──
     function run(cmd) { Quickshell.execDetached(["sh", "-c", cmd]) }
-    // drift's own lock screen
-    readonly property string lockCmd: "qs -c drift ipc call drift lock || loginctl lock-session"
+    // lock screen lives in shell.qml; ask it directly (works however drift was launched)
+    signal lockRequested()
+    function lock() { lockRequested() }
 }

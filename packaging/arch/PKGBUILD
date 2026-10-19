@@ -1,0 +1,51 @@
+# Maintainer: jscyril <jacobsebcyril@gmail.com>
+pkgname=drift-shell-git
+_pkgname=drift
+pkgver=r1.0000000
+pkgrel=1
+pkgdesc="A pixel-art, btop-flavoured desktop shell for niri, built on Quickshell"
+arch=('any')
+url="https://github.com/jscyril/drift"
+license=('unknown')
+depends=(
+    'quickshell' 'niri' 'matugen' 'jq' 'socat'
+    'pipewire' 'wireplumber' 'networkmanager' 'upower' 'brightnessctl'
+    'libnotify' 'wl-clipboard'
+    'otf-departure-mono' 'ttf-material-design-icons-desktop-git'
+)
+optdepends=(
+    'cliphist: clipboard history'
+    'grim: screenshots'
+    'slurp: region screenshots and recordings'
+    'swappy: edit screenshots before saving'
+    'gpu-screen-recorder: screen recording'
+    'pacman-contrib: update checker (checkupdates)'
+    'paru: AUR updates and one-click upgrade'
+    'kitty: terminal for the one-click upgrade'
+    'psmisc: camera-in-use indicator (fuser)'
+    'bluez: bluetooth'
+    'power-profiles-daemon: power profiles'
+    'hypridle: lock and suspend when idle'
+    'vicinae: default launcher for the Arch button'
+)
+makedepends=('git')
+provides=('drift-shell')
+conflicts=('drift-shell')
+source=("$_pkgname::git+$url.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$_pkgname"
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+package() {
+    cd "$_pkgname"
+    # Quickshell finds configs here, so `qs -c drift` and the drift command just work.
+    # A copy in ~/.config/quickshell/drift still takes priority for hacking on it.
+    local dest="$pkgdir/etc/xdg/quickshell/drift"
+    install -dm755 "$dest"
+    cp -r --no-preserve=ownership ./*.qml services components cards settings bin "$dest/"
+    install -Dm755 bin/drift "$pkgdir/usr/bin/drift"
+    install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

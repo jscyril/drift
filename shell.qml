@@ -40,14 +40,14 @@ ShellRoot {
 
     Connections {
         target: System
+        function onLockRequested() { lockScreen.lock() }
         function onOpenSettings(page) {
             settings.active = true
             if (page !== "") settings.item.page = page
         }
     }
 
-    // e.g. niri bind: spawn "qs" "-c" "drift" "ipc" "call" "drift" "toggle" "quick"
-    //                 spawn "qs" "-c" "drift" "ipc" "call" "drift" "settings" "network"
+    // usually reached through the `drift` command (bin/drift), e.g. `drift lock`
     IpcHandler {
         target: "drift"
         function toggle(card: string): void {

@@ -5,9 +5,10 @@ import "../services"
 RoundButton {
     id: cb
     property string command
+    property var fn: null             // run this instead of a shell command
     danger: armed.running
     onClicked: {
-        if (armed.running) { armed.stop(); System.run(cb.command) }
+        if (armed.running) { armed.stop(); if (cb.fn) cb.fn(); else System.run(cb.command) }
         else armed.start()
     }
     Timer { id: armed; interval: 2500 }

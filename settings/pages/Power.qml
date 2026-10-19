@@ -111,7 +111,7 @@ Column {
             spacing: 14
             Repeater {
                 model: [
-                    { icon: "lock", label: "lock", cmd: System.lockCmd },
+                    { icon: "lock", label: "lock", fn: () => System.lock() },
                     { icon: "monitor", label: "screen off", cmd: "sleep 0.6; niri msg action power-off-monitors" },
                     { icon: "sleep", label: "sleep", cmd: "systemctl suspend" },
                     { icon: "account", label: "log out", cmd: "niri msg action quit --skip-confirmation" },
@@ -121,7 +121,7 @@ Column {
                 Column {
                     required property var modelData
                     spacing: 4
-                    ConfirmButton { implicitWidth: 44; implicitHeight: 44; iconSize: 20; icon: modelData.icon; command: modelData.cmd }
+                    ConfirmButton { implicitWidth: 44; implicitHeight: 44; iconSize: 20; icon: modelData.icon; command: modelData.cmd || ""; fn: modelData.fn || null }
                     Label { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.label; color: Theme.dim }
                 }
             }

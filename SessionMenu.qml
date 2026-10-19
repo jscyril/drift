@@ -20,7 +20,7 @@ PanelWindow {
     color: "transparent"
 
     readonly property var actions: [
-        { key: "l", icon: "lock", label: "lock", ramp: "down", cmd: System.lockCmd },
+        { key: "l", icon: "lock", label: "lock", ramp: "down", fn: () => System.lock() },
         { key: "m", icon: "monitor", label: "screen off", ramp: "gh", cmd: "sleep 0.6; niri msg action power-off-monitors" },
         { key: "s", icon: "sleep", label: "sleep", ramp: "mem", cmd: "systemctl suspend" },
         { key: "e", icon: "account", label: "log out", ramp: "time", cmd: "niri msg action quit --skip-confirmation", confirm: true },
@@ -35,7 +35,7 @@ PanelWindow {
         sel = i
         if (a.confirm && armed !== i) { armed = i; disarm.restart(); return }
         menu.close()
-        System.run(a.cmd)
+        if (a.fn) a.fn(); else System.run(a.cmd)
     }
     Timer { id: disarm; interval: 3000; onTriggered: menu.armed = -1 }
 

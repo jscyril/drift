@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# drift: control the drift shell (a Quickshell config).
+# Finds the config at $DRIFT_DIR, ~/.config/quickshell/drift or /etc/xdg/quickshell/drift.
+set -euo pipefail
+
+VERSION="0.1.0"
+
+if [[ -n "${DRIFT_DIR:-}" ]]; then
+    QS=(qs -p "$DRIFT_DIR")
+else
+    QS=(qs -c drift)
+fi
+
+running() { "${QS[@]}" ipc show >/dev/null 2>&1; }
+ipc() {
+    if ! running; then
+        echo "drift isn't running (start it with: drift)" >&2
+        exit 1
+    fi
+    "${QS[@]}" ipc call drift "$@"
+}
+
+usage() {
+    cat <<EOF
+drift $VERSION: a pixel shell for niri
+
+usage: drift [command]
+
+  (none) | start         start drift in the background (no-op if running)
+  restart                stop and start again
+  stop | kill            stop drift
+  status                 is it running?
+  logs [-f]              show the log (-f to follow)
+
+  lock                   lock the screen
+  session                session menu (lock / sleep / reboot / power off)
+  capture                screenshot & recording menu
+  clipboard              clipboard history
+  settings [page]        settings app: look wallpaper bar clock notifications
+                         network bluetooth sound displays power data about
+  toggle <panel>         open/close a bar panel: quick media today system
+                         screen github updates
+
+  volume up|down|mute    change volume (shows the pop-up)
+  mic mute               toggle microphone mute
+  brightness up|down     change screen brightness
+  updates                re-check for package updates
+
+  ipc <function> [args]  call any drift IPC function directly
+  version | help
+EOF
+}
+
+cmd="${1:-start}"
+shift || true
+
+case "$cmd" in
+    start)
+        running && { echo "drift is already running"; exit 0; }
+        "${QS[@]}" -n -d >/dev/null
+        ;;
+    restart)
+        "${QS[@]}" kill >/dev/null 2>&1 || true
+        sleep 0.5
+        "${QS[@]}" -n -d >/dev/null
+        ;;
+    stop|kill)   "${QS[@]}" kill ;;
+    status)      running && echo "running" || { echo "stopped"; exit 1; } ;;
+    logs|log)    "${QS[@]}" log "$@" ;;
+
+    lock|session|capture|clipboard) ipc "$cmd" ;;
+    settings)    ipc settings "${1:-}" ;;
+    toggle)      ipc toggle "${1:?usage: drift toggle <panel>}" ;;
+    updates)     ipc updatesRefresh ;;
+
+    volume)
+        case "${1:-}" in
+            up) ipc volumeUp ;; down) ipc volumeDown ;; mute) ipc volumeMute ;;
+            *) echo "usage: drift volume up|down|mute" >&2; exit 2 ;;
+        esac ;;
+    mic)
+        [[ "${1:-}" == mute ]] && ipc micMute || { echo "usage: drift mic mute" >&2; exit 2; } ;;
+    brightness)
+        case "${1:-}" in
+            up) ipc brightnessUp ;; down) ipc brightnessDown ;;
+            *) echo "usage: drift brightness up|down" >&2; exit 2 ;;
+        esac ;;
+
+    ipc)         ipc "$@" ;;
+    version|-V|--version) echo "drift $VERSION" ;;
+    help|-h|--help) usage ;;
+    *)           echo "drift: unknown command '$cmd'" >&2; usage >&2; exit 2 ;;
+esac

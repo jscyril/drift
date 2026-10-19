@@ -22,8 +22,11 @@ Singleton {
     }
     function refresh() { if (!proc.running) { checking = true; proc.running = true } }
     // paru does the whole -Syu in a terminal; recheck once it closes
-    function upgrade() {
-        Quickshell.execDetached(["sh", "-c", "kitty --class drift-update -e sh -c 'paru -Syu; echo; read -p \"done - press enter to close \" _'; qs -c drift ipc call drift updatesRefresh"])
+    function upgrade() { if (!upgrader.running) upgrader.running = true }
+    Process {
+        id: upgrader
+        command: ["kitty", "--class", "drift-update", "-e", "sh", "-c", "paru -Syu; echo; read -p 'done - press enter to close ' _"]
+        onExited: up.refresh()
     }
 
     Process {

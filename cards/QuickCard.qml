@@ -32,8 +32,8 @@ ColumnLayout {
             }
         }
         RoundButton { icon: "cog"; onClicked: card.openCard("settings"); onRightClicked: card.settings("look") }
-        RoundButton { icon: "lock"; onClicked: { card.close(); System.run(System.lockCmd) } onRightClicked: card.settings("power") }
-        RoundButton { icon: "sleep"; onClicked: { card.close(); System.run(System.lockCmd + " & sleep 1; systemctl suspend") } onRightClicked: card.settings("power") }
+        RoundButton { icon: "lock"; onClicked: { card.close(); System.lock() } onRightClicked: card.settings("power") }
+        RoundButton { icon: "sleep"; onClicked: { card.close(); System.lock(); System.run("sleep 1; systemctl suspend") } onRightClicked: card.settings("power") }
         ConfirmButton { icon: "restart"; command: "systemctl reboot"; onRightClicked: card.settings("power") }
         ConfirmButton { icon: "power"; command: "systemctl poweroff"; onRightClicked: card.settings("power") }
     }
