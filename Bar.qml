@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Widgets
 import Quickshell.Services.SystemTray
+import Quickshell.Services.UPower
 import QtQuick
 import "services"
 import "components"
@@ -466,7 +467,12 @@ Scope {
                             Meter { value: System.muted ? 0 : System.volume; ramp: "mem"; segments: 5; segW: 2; segH: 10; anchors.verticalCenter: parent.verticalCenter }
                         }
                         Icon { visible: System.caffeine; name: "coffee"; size: 14; color: Theme.accent2; anchors.verticalCenter: parent.verticalCenter }
-                        BatteryPill { visible: System.hasBattery; anchors.verticalCenter: parent.verticalCenter }
+                        BatteryPill {
+                            id: batPill
+                            visible: System.hasBattery
+                            anchors.verticalCenter: parent.verticalCenter
+                            HoverHandler { id: batHover }
+                        }
                     }
                 }
 
@@ -579,6 +585,34 @@ Scope {
                 onActivated: bar.close()
                 onNotifChanged: if (!notif) bar.close()   // dismissed elsewhere
             }
+        }
+    }
+
+    // battery hover: power draw, time left, energy, health
+    Tip {
+        target: batPill
+        show: batHover.hovered && bar.card === ""
+        title: "battery"
+        hue: Theme.ramp("mem", System.batteryPct / 100)
+        Row {
+            spacing: 10
+            Label { text: System.batteryWatts.toFixed(1); font.pixelSize: Theme.fsBig; color: UPower.onBattery ? Theme.hue("temp") : Theme.hue("mem") }
+            Column {
+                anchors.verticalCenter: parent.verticalCenter
+                Label { text: UPower.onBattery ? "watts draw" : System.batteryWatts > 0.1 ? "watts charging" : "watts"; color: Theme.dim }
+                Label { text: System.batteryPct + "% · " + (UPower.onBattery ? "on battery" : System.batteryWatts > 0.1 ? "charging" : System.batteryPct >= 99 ? "full" : "plugged in"); color: Theme.dim }
+            }
+        }
+        Meter { value: System.batteryPct / 100; ramp: "mem"; segments: 30; segW: 5; segH: 8 }
+        Label {
+            visible: System.batterySecsLeft > 0
+            text: Theme.duration(System.batterySecsLeft) + (UPower.onBattery ? " left at this rate" : " until full")
+        }
+        Label {
+            visible: !!System.batteryDev
+            color: Theme.dim
+            text: System.batteryDev ? System.batteryDev.energy.toFixed(1) + " / " + System.batteryDev.energyCapacity.toFixed(1) + " Wh"
+                + (System.batteryDev.healthSupported ? " · health " + Math.round(System.batteryDev.healthPercentage) + "%" : "") : ""
         }
     }
 

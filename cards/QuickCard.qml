@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Services.UPower
 import "../services"
 import "../components"
 
@@ -27,7 +28,7 @@ ColumnLayout {
                 color: Theme.ramp("cpu", System.hasBattery ? (100 - System.batteryPct) / 100 * 0.9 : 0)
             }
             Label {
-                text: (System.hasBattery ? (System.charging ? "charging" : "on battery") + " · " : "") + "up " + Theme.duration(Stats.uptime)
+                text: (System.hasBattery ? System.batteryPowerText + (System.batterySecsLeft > 0 ? " · " + Theme.duration(System.batterySecsLeft) + (UPower.onBattery ? " left" : " to full") : "") + " · " : "") + "up " + Theme.duration(Stats.uptime)
                 color: Theme.dim
             }
         }

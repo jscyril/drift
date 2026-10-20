@@ -42,6 +42,14 @@ Singleton {
     readonly property bool lowPower: Config.opts.powerSaver === "on" || (Config.opts.powerSaver === "auto" && UPower.onBattery)
 
     // ── battery ──
+    // the physical battery: has the live power draw, energy and health
+    readonly property var batteryDev: UPower.devices.values.find(d => d.isLaptopBattery) || null
+    readonly property real batteryWatts: batteryDev ? Math.abs(batteryDev.changeRate) : 0
+    readonly property string batteryPowerText: !hasBattery ? ""
+        : UPower.onBattery ? batteryWatts.toFixed(1) + " W draw"
+        : batteryWatts > 0.1 ? batteryWatts.toFixed(1) + " W charging"
+        : "plugged in"
+    readonly property real batterySecsLeft: !battery ? 0 : UPower.onBattery ? battery.timeToEmpty : battery.timeToFull
     readonly property var battery: UPower.displayDevice
     readonly property bool hasBattery: battery && battery.isLaptopBattery
     // UPower reports 0..1 on current Quickshell; older builds used 0..100
