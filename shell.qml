@@ -12,6 +12,10 @@ ShellRoot {
         model: Quickshell.screens
         Bar {}
     }
+    Variants {
+        model: Quickshell.screens
+        Backdrop {}
+    }
 
     // settings window: only exists while open
     LazyLoader {

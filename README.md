@@ -219,12 +219,11 @@ binds {
 
 For hypridle, set `lock_cmd = drift lock` (and use it for `before_sleep_cmd` too).
 
-To show the wallpaper behind workspaces in niri's overview, put the wallpaper layer in the backdrop:
+For the overview background (a dimmed, pixelated copy of the wallpaper so workspaces stand out), place drift's backdrop layer:
 
 ```kdl
-layout { background-color "transparent"; }
 layer-rule {
-    match namespace="^noctalia-wallpaper$"
+    match namespace="^drift-backdrop$"
     place-within-backdrop true
 }
 ```
@@ -267,6 +266,7 @@ Measured on a Ryzen 5 4600H laptop: about **1% of one core** in power saver, ver
 
 ```
 shell.qml           entry: bars per screen, overlays, IPC
+Backdrop.qml        niri overview background (dimmed, pixelated wallpaper)
 bin/drift           the drift command
 install.sh          installer for git clones
 packaging/arch/     PKGBUILD (drift-shell-git)
