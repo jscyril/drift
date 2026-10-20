@@ -9,18 +9,6 @@ import "../../components"
 Column {
     id: pg
     spacing: 18
-    readonly property string dir: Config.opts.wallpaperDir.replace(/^~/, Quickshell.env("HOME"))
-    property var files: []
-
-    Process {
-        id: ls
-        running: true
-        command: ["find", "-L", pg.dir, "-maxdepth", "2", "-type", "f", "(", "-iname", "*.png", "-o", "-iname", "*.jpg",
-                  "-o", "-iname", "*.jpeg", "-o", "-iname", "*.webp", ")"]
-        stdout: StdioCollector { onStreamFinished: pg.files = this.text.split("\n").filter(l => l !== "").sort() }
-    }
-    onDirChanged: { ls.running = false; ls.running = true }
-
     Section {
         title: "current"
         hue: Theme.hue("time")
@@ -45,22 +33,40 @@ Column {
                 Label { width: parent.width; text: Theme.wallpaper; elide: Text.ElideMiddle; color: Theme.dim }
                 Row {
                     spacing: 6
-                    Chip { text: "random"; icon: "refresh"; onClicked: if (pg.files.length) Theme.setWallpaper(pg.files[Math.floor(Math.random() * pg.files.length)]) }
-                    Chip { text: "previous"; icon: "left"; onClicked: pg.step(-1) }
-                    Chip { text: "next"; icon: "right"; onClicked: pg.step(1) }
+                    Chip { text: "random"; icon: "refresh"; onClicked: Wallpapers.random() }
+                    Chip { text: "previous"; icon: "left"; onClicked: Wallpapers.step(-1) }
+                    Chip { text: "next"; icon: "right"; onClicked: Wallpapers.step(1) }
                 }
             }
         }
     }
-    function step(d) {
-        if (!files.length) return
-        var i = files.indexOf(Theme.wallpaper)
-        Theme.setWallpaper(files[(i + d + files.length) % files.length])
+    Section {
+        title: "rotation"
+        badge: Config.opts.wallpaperMinutes > 0 ? "every " + Config.opts.wallpaperMinutes + " min" : "off"
+        hue: Theme.hue("time")
+        Setting {
+            title: "change every"
+            Segmented {
+                options: [{ label: "off", value: 0 }, { label: "5m", value: 5 }, { label: "15m", value: 15 },
+                          { label: "30m", value: 30 }, { label: "1h", value: 60 }]
+                value: Config.opts.wallpaperMinutes
+                onPicked: v => Config.opts.wallpaperMinutes = v
+            }
+        }
+        Setting {
+            visible: Config.opts.wallpaperMinutes > 0
+            title: "order"
+            Segmented {
+                options: [{ label: "shuffle", value: true }, { label: "in order", value: false }]
+                value: Config.opts.wallpaperShuffle
+                onPicked: v => Config.opts.wallpaperShuffle = v
+            }
+        }
     }
 
     Section {
         title: "library"
-        badge: pg.files.length + " images"
+        badge: Wallpapers.files.length + " images"
         Setting {
             title: "folder"
             Field { width: 280; text: Config.opts.wallpaperDir; onCommitted: t => Config.opts.wallpaperDir = t.trim() }
@@ -72,7 +78,7 @@ Column {
             readonly property int cols: Math.max(2, Math.floor((width + 10) / 190))
             readonly property real cw: (width - (cols - 1) * 10) / cols
             Repeater {
-                model: pg.files
+                model: Wallpapers.files
                 Item {
                     id: thumb
                     required property string modelData
@@ -98,10 +104,10 @@ Column {
                         title: thumb.cur ? "current" : ""
                         titleColor: Theme.hue("time")
                     }
-                    MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Theme.setWallpaper(thumb.modelData) }
+                    MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Wallpapers.set(thumb.modelData) }
                 }
             }
         }
-        Label { visible: pg.files.length === 0; text: "no images in " + pg.dir; color: Theme.dim }
+        Label { visible: Wallpapers.files.length === 0; text: "no images in " + Wallpapers.dir; color: Theme.dim }
     }
 }

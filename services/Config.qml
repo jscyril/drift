@@ -67,6 +67,8 @@ Singleton {
             property string launcherCommand: "vicinae toggle"
             // wallpaper
             property string wallpaperDir: "~/Pictures/Wallpapers"
+            property int wallpaperMinutes: 0               // rotate every N minutes, 0 = off
+            property bool wallpaperShuffle: true
         }
     }
 

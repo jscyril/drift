@@ -6,6 +6,8 @@ import "settings"
 
 ShellRoot {
     id: root
+    // singletons start on first use; the wallpaper rotation must run from launch
+    readonly property var wallpapers: Wallpapers
     Variants {
         model: Quickshell.screens
         Bar {}

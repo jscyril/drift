@@ -219,6 +219,16 @@ binds {
 
 For hypridle, set `lock_cmd = drift lock` (and use it for `before_sleep_cmd` too).
 
+To show the wallpaper behind workspaces in niri's overview, put the wallpaper layer in the backdrop:
+
+```kdl
+layout { background-color "transparent"; }
+layer-rule {
+    match namespace="^noctalia-wallpaper$"
+    place-within-backdrop true
+}
+```
+
 ## Configuration
 
 All settings live in `~/.config/drift/config.json`. The settings app writes it, but you can also edit it by hand; both apply live. Notable keys:
@@ -236,6 +246,8 @@ All settings live in `~/.config/drift/config.json`. The settings app writes it, 
 | `idleMinutes` | `3` | screen time pauses after this |
 | `launcherCommand` | `"vicinae toggle"` | what the Arch button runs |
 | `wallpaperDir` | `"~/Pictures/Wallpapers"` | for the wallpaper picker |
+| `wallpaperMinutes` | `0` | rotate the wallpaper every N minutes (0 = off) |
+| `wallpaperShuffle` | `true` | random order, or folder order |
 | `powerSaver` | `"auto"` | `"auto"` (on battery), `"on"`, `"off"` |
 | `animSpeed` | `1.0` | global animation speed |
 
