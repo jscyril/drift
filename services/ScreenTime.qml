@@ -28,7 +28,13 @@ Singleton {
     function total(k) { return day(k).hourly.reduce((a, b) => a + b, 0) }
 
     readonly property string todayKey: { version; return key(new Date()) }
-    readonly property var today: day(todayKey)
+    // a fresh object on every tick: the stored one is mutated in place, and handing
+    // bindings the same object again doesn't count as a change (the bar froze on that)
+    readonly property var today: {
+        version
+        var d = day(todayKey)
+        return { apps: Object.assign({}, d.apps), hourly: d.hourly.slice(), app_hourly: d.app_hourly }
+    }
     readonly property real todayTotal: today.hourly.reduce((a, b) => a + b, 0)
     readonly property var todayApps: Object.keys(today.apps).map(a => ({ app: a, secs: today.apps[a] }))
         .sort((a, b) => b.secs - a.secs)
