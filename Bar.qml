@@ -16,6 +16,8 @@ Scope {
     readonly property string output: modelData.name
     readonly property int h: Config.opts.barHeight
     readonly property int m: Config.opts.barMargin
+    readonly property bool docked: m === 0
+    readonly property int cornerR: 18              // multiple of 3 (the pixel step)
 
     property string card: ""                   // "", quick, media, today, notif, system, screen, github
     property string shownCard: ""              // lags `card` so content stays while closing
@@ -100,6 +102,30 @@ Scope {
             Keys.onEscapePressed: bar.close()
         }
 
+        // docked (edge gap 0): stepped concave corners under each end of the bar,
+        // so the windows below look rounded where they meet it
+        Repeater {
+            model: bar.docked ? 2 : 0
+            Item {
+                id: corner
+                required property int index
+                x: index === 0 ? 0 : win.width - width
+                y: bar.h
+                width: bar.cornerR; height: bar.cornerR
+                Repeater {
+                    model: bar.cornerR / 3
+                    Rectangle {
+                        required property int index
+                        readonly property real dy: bar.cornerR - index * 3 - 1.5
+                        y: index * 3; height: 3
+                        width: 3 * Math.round((bar.cornerR - Math.sqrt(bar.cornerR * bar.cornerR - dy * dy)) / 3)
+                        x: corner.index === 0 ? 0 : bar.cornerR - width
+                        color: barBox.fill
+                    }
+                }
+            }
+        }
+
         // ══ the bar ══
         PixelBox {
             id: barBox
@@ -107,9 +133,9 @@ Scope {
             y: bar.m
             width: parent.width - 2 * bar.m
             height: bar.h
-            step: 3
+            step: bar.docked ? 0 : 3
             fill: Theme.alpha(Theme.surface, Config.opts.barOpacity)
-            stroke: Theme.alpha(Theme.accent, 0.5)
+            stroke: bar.docked ? "transparent" : Theme.alpha(Theme.accent, 0.5)
 
             Fx { id: fx; anchors.margins: 1 }
 

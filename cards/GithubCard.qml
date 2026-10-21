@@ -60,12 +60,18 @@ Column {
         }
         Row {
             spacing: 6
-            Column {
-                width: 24
-                spacing: 2
+            // pinned to the heatmap's rows (row 0 = sunday)
+            Item {
+                width: 24; height: hm.height
                 Repeater {
-                    model: ["", "mon", "", "wed", "", "fri", ""]
-                    Label { required property string modelData; height: 9; text: modelData; color: Theme.dim; font.pixelSize: 8 }
+                    model: [1, 3, 5]
+                    Label {
+                        required property int modelData
+                        y: modelData * (hm.cell + hm.gap)
+                        height: hm.cell
+                        text: ["mon", "wed", "fri"][(modelData - 1) / 2]
+                        color: Theme.dim; font.pixelSize: 8
+                    }
                 }
             }
             Heatmap { id: hm; weeks: 53; cell: 9; gap: 2 }

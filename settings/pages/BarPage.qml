@@ -22,7 +22,7 @@ Column {
         }
         Setting {
             title: "edge gap"
-            hint: "space between the bar and the screen edge"
+            hint: "space between the bar and the screen edge; 0 docks it with rounded corners"
             below: true
             MiniSlider {
                 width: parent.width
