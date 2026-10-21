@@ -36,6 +36,12 @@ Column {
                 Label { text: modelData.value; font.pixelSize: Theme.fsBig; color: Theme.fg }
             }
         }
+        Chip {
+            anchors.bottom: parent.bottom
+            text: GitHub.loading ? "refreshing…" : "refresh"
+            icon: "refresh"
+            onClicked: if (!GitHub.loading) GitHub.refresh()
+        }
     }
 
     Column {

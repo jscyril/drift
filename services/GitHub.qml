@@ -4,14 +4,15 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// Public contribution calendar via github-contributions-api.jogruber.de
-// (no token needed). Refreshed every 30 minutes.
+// Public contribution calendar, read straight from GitHub's own calendar page
+// (no token needed; third-party APIs cache it and lag). Refreshed every 30 minutes.
 Singleton {
     id: gh
 
     property var days: []                // [{ date, count, level }], oldest first
     property int totalYear: 0
     property bool ready: false
+    readonly property bool loading: proc.running
 
     readonly property int streak: {
         var s = 0
@@ -49,19 +50,32 @@ Singleton {
 
     function refresh() { if (Config.opts.githubUser !== "") proc.running = true }
 
+    // github.com/users/<name>/contributions: a <td data-date data-level> per day,
+    // with the count only in its <tool-tip for=id> ("No contributions" / "3 contributions")
+    function parse(html) {
+        var counts = {}, m
+        var tipRe = /<tool-tip[^>]*\bfor="([^"]+)"[^>]*>\s*(No|\d+) contribution/g
+        while ((m = tipRe.exec(html))) counts[m[1]] = m[2] === "No" ? 0 : Number(m[2])
+        var out = [], tdRe = /<td\b[^>]*ContributionCalendar-day[^>]*>/g
+        while ((m = tdRe.exec(html))) {
+            var date = /data-date="([^"]+)"/.exec(m[0]), id = /\bid="([^"]+)"/.exec(m[0]), level = /data-level="(\d)"/.exec(m[0])
+            if (!date || !id) continue
+            out.push({ date: date[1], count: counts[id[1]] || 0, level: level ? Number(level[1]) : 0 })
+        }
+        return out.sort((a, b) => a.date < b.date ? -1 : 1)
+    }
+
     Process {
         id: proc
-        command: ["curl", "-s", "--max-time", "15",
-                  "https://github-contributions-api.jogruber.de/v4/" + encodeURIComponent(Config.opts.githubUser) + "?y=last"]
+        command: ["curl", "-sfL", "--max-time", "15",
+                  "https://github.com/users/" + encodeURIComponent(Config.opts.githubUser) + "/contributions"]
         stdout: StdioCollector {
             onStreamFinished: {
-                try {
-                    var j = JSON.parse(this.text)
-                    if (!j.contributions) return
-                    gh.days = j.contributions
-                    gh.totalYear = j.total.lastYear || 0
-                    gh.ready = true
-                } catch (e) {}
+                var d = gh.parse(this.text)
+                if (d.length === 0) return            // network/markup failure: keep the last good data
+                gh.days = d
+                gh.totalYear = d.reduce((n, x) => n + x.count, 0)
+                gh.ready = true
             }
         }
     }
