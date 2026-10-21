@@ -614,7 +614,7 @@ Scope {
         Component { id: todayCard; TodayCard { onClose: bar.close() } }
         Component { id: systemCard; SystemCard {} }
         Component { id: screenCard; ScreenCard {} }
-        Component { id: githubCard; GithubCard {} }
+        Component { id: githubCard; GithubCard { onClose: bar.close() } }
         Component { id: updatesCard; UpdatesCard { onClose: bar.close() } }
         Component { id: todoCard; TodoCard {} }
         Component {

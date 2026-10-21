@@ -5,6 +5,7 @@ import "../components"
 // A year of GitHub contributions with streak stats. Hover a cell for its day.
 Column {
     id: card
+    signal close()
     spacing: 14
 
     readonly property var cols: GitHub.grid(53)
@@ -36,11 +37,20 @@ Column {
                 Label { text: modelData.value; font.pixelSize: Theme.fsBig; color: Theme.fg }
             }
         }
-        Chip {
+        Column {
             anchors.bottom: parent.bottom
-            text: GitHub.loading ? "refreshing…" : "refresh"
-            icon: "refresh"
-            onClicked: if (!GitHub.loading) GitHub.refresh()
+            spacing: 6
+            Chip {
+                width: parent.width
+                text: "profile"
+                icon: "github"
+                onClicked: { card.close(); Qt.openUrlExternally("https://github.com/" + encodeURIComponent(Config.opts.githubUser)) }
+            }
+            Chip {
+                text: GitHub.loading ? "refreshing…" : "refresh"
+                icon: "refresh"
+                onClicked: if (!GitHub.loading) GitHub.refresh()
+            }
         }
     }
 
