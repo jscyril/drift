@@ -10,7 +10,9 @@ Item {
     signal committed(string text)
     readonly property string textValue: input.text   // live, before commit
     signal edited(string text)
+    signal accepted(string text)                      // Enter only, unlike committed
     function grab() { input.forceActiveFocus() }
+    function clear() { input.text = "" }
 
     implicitWidth: 200
     implicitHeight: 24
@@ -52,6 +54,7 @@ Item {
         echoMode: f.password ? TextInput.Password : TextInput.Normal
         passwordCharacter: "*"
         onEditingFinished: f.committed(text)
+        onAccepted: f.accepted(text)
         onTextEdited: f.edited(text)
 
         Label {

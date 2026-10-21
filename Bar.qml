@@ -27,7 +27,7 @@ Scope {
 
     readonly property var titles: ({
         quick: "control", media: "now playing", today: "today",
-        notif: "notification", system: "system", screen: "screen time", github: "github", updates: "updates"
+        notif: "notification", system: "system", screen: "screen time", github: "github", updates: "updates", todo: "to-do"
     })
 
     function open(name, fromItem) {
@@ -376,6 +376,21 @@ Scope {
                     }
                 }
 
+                Module {
+                    id: todoMod
+                    visible: Config.opts.showTodo
+                    anchors.verticalCenter: parent.verticalCenter
+                    hue: Theme.accent3
+                    active: bar.card === "todo"
+                    onClicked: bar.open("todo", todoMod)
+                    Row {
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 4
+                        Icon { name: "todo"; size: 14; color: todoMod.hue; anchors.verticalCenter: parent.verticalCenter }
+                        Num { visible: Todo.pending > 0; text: Todo.pending; color: Todo.overdue > 0 ? Theme.ramp("temp", 1) : todoMod.hue }
+                    }
+                }
+
                 Sep {}
 
                 Module {
@@ -580,7 +595,7 @@ Scope {
                     Behavior on opacity { NumberAnimation { duration: Theme.dur(180) } }
                     sourceComponent: ({ quick: quickCard, media: mediaCard, today: todayCard,
                                         notif: notifCard, system: systemCard, screen: screenCard, github: githubCard,
-                                        updates: updatesCard })[bar.shownCard] || null
+                                        updates: updatesCard, todo: todoCard })[bar.shownCard] || null
                 }
             }
         }
@@ -601,6 +616,7 @@ Scope {
         Component { id: screenCard; ScreenCard {} }
         Component { id: githubCard; GithubCard {} }
         Component { id: updatesCard; UpdatesCard { onClose: bar.close() } }
+        Component { id: todoCard; TodoCard {} }
         Component {
             id: notifCard
             NotifItem {

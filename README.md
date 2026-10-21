@@ -21,6 +21,7 @@ Pixel fonts, staircase corners, neon gradient meters, and colors pulled live fro
 - [The drift command](#the-drift-command)
 - [Keybinds (niri)](#keybinds-niri)
 - [Configuration](#configuration)
+- [Google Tasks sync](#google-tasks-sync)
 - [Battery life](#battery-life)
 - [Project layout](#project-layout)
 - [Known limitations](#known-limitations)
@@ -50,6 +51,7 @@ Pixel fonts, staircase corners, neon gradient meters, and colors pulled live fro
 | media | album art rendered as chunky pixels, progress, controls |
 | today | calendar + detailed weather |
 | updates | pacman + AUR updates, one-click `paru -Syu` in kitty |
+| to-do | a checklist with due dates: type and press Enter to add (`pay rent @fri 5pm`, `@tmr`, `@9am`, `@25oct 17:30`, `@25/10`, `@2w`), click to tick off, hover to change the date or delete. Sort by your order or by date; overdue tasks turn red. Optional reminders: a notification at a task's time, and a 9:00 summary of what's due. Saved to `~/.config/drift/todos.json`, or synced with [Google Tasks](#google-tasks-sync) |
 
 **Overlays**
 
@@ -187,7 +189,7 @@ drift capture           screenshot & recording menu
 drift clipboard         clipboard history
 drift settings [page]   settings app: look wallpaper bar clock notifications network
                         bluetooth sound displays power data about
-drift toggle <panel>    bar panel: quick media today system screen github updates
+drift toggle <panel>    bar panel: quick media today system screen github updates todo
 
 drift volume up|down|mute
 drift mic mute
@@ -251,6 +253,22 @@ All settings live in `~/.config/drift/config.json`. The settings app writes it, 
 | `animSpeed` | `1.0` | global animation speed |
 
 Screen time is stored in `~/.local/state/drift/screentime.json` (90 days).
+
+## Google Tasks sync
+
+The to-do panel can mirror your default Google Tasks list (settings → bar → "sync to-do with google tasks"). Google makes every app bring its own sign-in client, so it takes about 10 minutes of one-time setup in the [Google Cloud Console](https://console.cloud.google.com). It's free and needs no billing.
+
+1. Create a project, then enable the **Google Tasks API** for it.
+2. **Google Auth Platform** → Get started: any app name, your email, audience **External**.
+3. **Branding**: add a home page and privacy policy link (any page you own works). **Data access**: add the `.../auth/tasks` scope.
+4. **Audience** → **Publish app**. Skip verification; it's only needed for public apps. In "Testing" mode Google signs you out every 7 days.
+5. **Clients** → Create client → **Desktop app**. Download the JSON straight away and save it as `~/.config/drift/google-client.json`.
+
+Turning sync on opens your browser to sign in once. Google warns that the app is unverified, because it's your own; click Advanced → Go to (app name). The sign-in token is saved in `~/.config/drift/google-token.json`, readable only by you. It needs `python`.
+
+Google Tasks only stores a due *day*, so times you add in drift stay on this computer (`~/.config/drift/todo-meta.json`) and don't show in Google's apps.
+
+The panel shows open tasks plus anything finished in the last day, so you can untick mistakes. Edits show instantly and sync in the background; it also re-syncs every 2 minutes and whenever the panel opens. Edits made while offline are lost on the next sync.
 
 ## Battery life
 

@@ -52,6 +52,10 @@ Singleton {
             property bool showScreenTime: true
             property bool showGithub: true
             property bool showMedia: true
+            property bool showTodo: true
+            property bool todoGoogle: false               // sync the to-do list with Google Tasks
+            property string todoSort: "order"             // "order" | "date"
+            property bool todoNotify: true                // reminders for timed tasks + a 09:00 summary
             // time & weather
             property bool clock24h: true
             property bool showSeconds: false

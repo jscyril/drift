@@ -1,0 +1,245 @@
+#!/usr/bin/env python3
+"""Google Tasks sync for drift's to-do panel (your default list). Standard library only.
+
+  drift-gtasks login            sign in if needed (opens the browser), then pull
+  drift-gtasks pull             fetch the list
+  drift-gtasks add TEXT [DUE]   add a task (DUE is YYYY-MM-DD), then pull
+  drift-gtasks done|undone ID   tick / untick, then pull
+  drift-gtasks due ID DUE|none  set or clear the due date, then pull
+  drift-gtasks delete ID        delete, then pull
+
+Prints one JSON object: {"ok": true, "items": [{id, text, done, due?, notes?}], "created"?: id}
+or {"ok": false, "error": "...", "signin": true|false}.
+
+Needs an OAuth "Desktop app" client from Google Cloud saved as
+~/.config/drift/google-client.json (see the README).
+"""
+import base64, datetime, hashlib, http.server, json, os, secrets, subprocess, sys, time
+import urllib.error, urllib.parse, urllib.request
+
+CONF = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "drift")
+CLIENT = os.path.join(CONF, "google-client.json")
+TOKEN = os.path.join(CONF, "google-token.json")
+SCOPE = "https://www.googleapis.com/auth/tasks"
+API = "https://tasks.googleapis.com/tasks/v1/lists/@default/tasks"
+DONE_FOR = datetime.timedelta(hours=24)   # finished tasks stay visible this long (to untick mistakes)
+
+
+class NotSignedIn(Exception):
+    pass
+
+
+def client():
+    try:
+        with open(CLIENT) as f:
+            c = json.load(f)
+    except FileNotFoundError:
+        raise NotSignedIn("no Google client file at " + CLIENT)
+    return c.get("installed") or c["web"]
+
+
+def post_form(url, data):
+    req = urllib.request.Request(url, urllib.parse.urlencode(data).encode())
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.load(r)
+
+
+def auth():
+    """Browser sign-in: loopback redirect + PKCE, as Google wants for desktop apps."""
+    c = client()
+    verifier = secrets.token_urlsafe(64)
+    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+    state = secrets.token_urlsafe(16)
+    got = {}
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if q.get("state", [""])[0] != state:          # favicon, strays, forged redirects
+                self.send_response(404)
+                self.end_headers()
+                return
+            got.update({k: v[0] for k, v in q.items()})
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.end_headers()
+            msg = "drift: signed in to Google Tasks. You can close this tab." if "code" in got \
+                else "drift: sign-in failed (" + got.get("error", "unknown") + ")."
+            self.wfile.write(msg.encode())
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    srv.timeout = 2
+    redirect = "http://127.0.0.1:%d" % srv.server_port
+    url = c["auth_uri"] + "?" + urllib.parse.urlencode({
+        "client_id": c["client_id"], "redirect_uri": redirect, "response_type": "code",
+        "scope": SCOPE, "access_type": "offline", "prompt": "consent", "state": state,
+        "code_challenge": challenge, "code_challenge_method": "S256",
+    })
+    print("sign in here: " + url, file=sys.stderr)
+    subprocess.Popen(["xdg-open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    end = time.time() + 300
+    while not got and time.time() < end:
+        srv.handle_request()
+    srv.server_close()
+    if "code" not in got:
+        raise NotSignedIn("sign-in " + ("failed: " + got["error"] if got else "timed out"))
+
+    tok = post_form(c["token_uri"], {
+        "code": got["code"], "client_id": c["client_id"], "client_secret": c.get("client_secret", ""),
+        "redirect_uri": redirect, "grant_type": "authorization_code", "code_verifier": verifier,
+    })
+    if "refresh_token" not in tok:
+        raise NotSignedIn("Google sent no refresh token")
+    fd = os.open(TOKEN, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump({"refresh_token": tok["refresh_token"]}, f)
+
+
+def access_token():
+    try:
+        with open(TOKEN) as f:
+            refresh = json.load(f)["refresh_token"]
+    except (FileNotFoundError, KeyError, ValueError):
+        raise NotSignedIn("not signed in")
+    c = client()
+    try:
+        # shortcut: refreshes on every run (one extra request); cache it if syncing ever gets frequent
+        return post_form(c["token_uri"], {
+            "client_id": c["client_id"], "client_secret": c.get("client_secret", ""),
+            "refresh_token": refresh, "grant_type": "refresh_token",
+        })["access_token"]
+    except urllib.error.HTTPError as e:
+        if e.code in (400, 401):                           # revoked or expired grant
+            raise NotSignedIn("Google sign-in expired")
+        raise
+
+
+def api(token, method, path="", body=None, query=None):
+    url = API + path + ("?" + urllib.parse.urlencode(query) if query else "")
+    req = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        raw = r.read()
+    return json.loads(raw) if raw else None
+
+
+def to_items(tasks, now):
+    """Google tasks -> drift items: open tasks plus ones finished in the last DONE_FOR,
+    in Google's order with subtasks right after their parent."""
+    def keep(t):
+        if not (t.get("title") or "").strip() or t.get("deleted"):
+            return False
+        if t.get("status") != "completed":
+            return True
+        done_at = t.get("completed")
+        if not done_at:
+            return False
+        return now - datetime.datetime.fromisoformat(done_at.replace("Z", "+00:00")) < DONE_FOR
+
+    kept = sorted((t for t in tasks if keep(t)), key=lambda t: t.get("position", ""))
+    ids = {t["id"] for t in kept}
+    kids = {}
+    for t in kept:
+        if t.get("parent") in ids:
+            kids.setdefault(t["parent"], []).append(t)
+    out = []
+    for t in kept:
+        if t.get("parent") in ids:
+            continue
+        out.append(t)
+        out.extend(kids.get(t["id"], []))
+    def item(t):
+        i = {"id": t["id"], "text": t["title"].strip(), "done": t.get("status") == "completed"}
+        if t.get("due"):
+            i["due"] = t["due"][:10]                      # Google keeps only the day
+        if (t.get("notes") or "").strip():
+            i["notes"] = t["notes"].strip()
+        return i
+    return [item(t) for t in out]
+
+
+def pull(token):
+    tasks, page = [], None
+    while True:
+        q = {"showCompleted": "true", "showHidden": "true", "maxResults": "100"}   # hidden = done in Google's own apps
+        if page:
+            q["pageToken"] = page
+        r = api(token, "GET", query=q)
+        tasks += r.get("items", [])
+        page = r.get("nextPageToken")
+        if not page:
+            return to_items(tasks, datetime.datetime.now(datetime.timezone.utc))
+
+
+def google_due(day):
+    """YYYY-MM-DD -> Google's format; "" / "none" -> clear."""
+    if day in ("", "none"):
+        return None
+    datetime.date.fromisoformat(day)                      # reject junk before it reaches Google
+    return day + "T00:00:00.000Z"
+
+
+def main(argv):
+    cmd, args = (argv[0] if argv else "pull"), argv[1:]
+    if cmd == "login":
+        try:
+            access_token()
+        except NotSignedIn:
+            auth()
+    token = access_token()
+    created = None
+    if cmd == "add":
+        body = {"title": args[0]}
+        if len(args) > 1 and google_due(args[1]):
+            body["due"] = google_due(args[1])
+        created = api(token, "POST", body=body)["id"]
+    elif cmd == "done":
+        api(token, "PATCH", "/" + args[0], body={"status": "completed"})
+    elif cmd == "undone":
+        api(token, "PATCH", "/" + args[0], body={"status": "needsAction", "completed": None})
+    elif cmd == "due":
+        api(token, "PATCH", "/" + args[0], body={"due": google_due(args[1])})
+    elif cmd == "delete":
+        api(token, "DELETE", "/" + args[0])
+    elif cmd not in ("pull", "login"):
+        raise SystemExit("unknown command: " + cmd)
+    out = {"ok": True, "items": pull(token)}
+    if created:
+        out["created"] = created                          # so drift can attach a time to it
+    return out
+
+
+def selftest():
+    now = datetime.datetime(2026, 1, 10, 12, tzinfo=datetime.timezone.utc)
+    tasks = [
+        {"id": "b", "title": "second", "position": "002", "status": "needsAction"},
+        {"id": "a", "title": "first", "position": "001", "status": "needsAction"},
+        {"id": "a1", "title": "sub of first", "position": "000", "parent": "a", "status": "needsAction"},
+        {"id": "old", "title": "done long ago", "position": "003", "status": "completed", "completed": "2026-01-01T00:00:00.000Z"},
+        {"id": "new", "title": "done just now", "position": "004", "status": "completed", "completed": "2026-01-10T11:00:00.000Z",
+         "due": "2026-01-12T00:00:00.000Z", "notes": " call first "},
+        {"id": "blank", "title": "  ", "position": "005", "status": "needsAction"},
+    ]
+    got = [(i["id"], i["done"]) for i in to_items(tasks, now)]
+    assert got == [("a", False), ("a1", False), ("b", False), ("new", True)], got
+    last = to_items(tasks, now)[-1]
+    assert last["due"] == "2026-01-12" and last["notes"] == "call first", last
+    assert google_due("none") is None and google_due("2026-03-04") == "2026-03-04T00:00:00.000Z"
+    print("selftest ok")
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] == ["selftest"]:
+        selftest()
+        sys.exit(0)
+    try:
+        print(json.dumps(main(sys.argv[1:])))
+    except NotSignedIn as e:
+        print(json.dumps({"ok": False, "error": str(e), "signin": True}))
+    except urllib.error.HTTPError as e:
+        print(json.dumps({"ok": False, "error": "Google said %d %s" % (e.code, e.reason), "signin": False}))
+    except (urllib.error.URLError, OSError) as e:
+        print(json.dumps({"ok": False, "error": "offline? " + str(getattr(e, "reason", e)), "signin": False}))

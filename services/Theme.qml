@@ -97,7 +97,8 @@ Singleton {
         "devices": 0xf0fb0, "crop": 0xf019e, "window": 0xf10ac, "record": 0xf044a, "video": 0xf0567,
         "webcam": 0xf05a0, "screen-share": 0xf1483, "package-up": 0xf03d5, "clipboard": 0xf0a38,
         "unlock": 0xf0fc6, "account-circle": 0xf0009, "enter": 0xf0734, "pencil": 0xf03eb, "radar": 0xf0437, "rotate": 0xf0467, "cpu64": 0xf0ee0, "disk": 0xf02ca,
-        "account": 0xf0004, "plug": 0xf06a5, "eye": 0xf0208
+        "account": 0xf0004, "plug": 0xf06a5, "eye": 0xf0208,
+        "checkbox-blank": 0xf0131, "checkbox-marked": 0xf0132, "todo": 0xf0756, "calendar": 0xf00ed
     })
     function glyph(name) {
         var c = glyphs[name]

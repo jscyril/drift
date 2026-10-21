@@ -26,6 +26,7 @@ optdepends=(
     'bluez: bluetooth'
     'power-profiles-daemon: power profiles'
     'hypridle: lock and suspend when idle'
+    'python: google tasks sync for the to-do list'
     'vicinae: default launcher for the Arch button'
 )
 makedepends=('git')

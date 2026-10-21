@@ -2,3 +2,7 @@
 _test/
 _locktest*.qml
 .qmlls.ini
+
+# google tasks sign-in (belongs in ~/.config/drift, never in the repo)
+google-client.json
+google-token.json

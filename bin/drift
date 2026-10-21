@@ -39,7 +39,7 @@ usage: drift [command]
   settings [page]        settings app: look wallpaper bar clock notifications
                          network bluetooth sound displays power data about
   toggle <panel>         open/close a bar panel: quick media today system
-                         screen github updates
+                         screen github updates todo
 
   volume up|down|mute    change volume (shows the pop-up)
   mic mute               toggle microphone mute
