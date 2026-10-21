@@ -47,7 +47,7 @@ Pixel fonts, staircase corners, neon gradient meters, and colors pulled live fro
 | system | big CPU graph, per-core meters, memory/swap, network, sensors, disks, top processes (hover to kill) |
 | screen time | today vs yesterday, hour-by-hour chart, top apps, the past 7 days |
 | github | full-year heatmap, streak, best streak, best day |
-| control | volume / mic / brightness sliders, Wi-Fi, Bluetooth, DND and caffeine tiles, session buttons, notifications. **Right-click any control to jump to its settings page.** |
+| control | volume / mic / brightness sliders, Wi-Fi, Bluetooth, DND and caffeine tiles, session buttons, a **battery saver** toggle (leaf: power-saver profile, 25% brightness, Bluetooth off, drift's own power saver; switching it off restores them), notifications. **Right-click any control to jump to its settings page.** |
 | media | album art rendered as chunky pixels, progress, controls |
 | today | calendar + detailed weather |
 | updates | pacman + AUR updates, one-click `paru -Syu` in kitty |
@@ -195,6 +195,7 @@ drift volume up|down|mute
 drift mic mute
 drift brightness up|down
 drift updates           re-check for package updates
+drift saver             toggle battery saver (also the leaf button in the control panel)
 drift ipc <fn> [args]   call any IPC function directly
 ```
 

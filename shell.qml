@@ -67,6 +67,7 @@ ShellRoot {
         function capture(): void { capLoader.active = !capLoader.active }
         function lock(): void { lockScreen.lock() }
         function updatesRefresh(): void { Updates.refresh() }
+        function batterySaver(): void { Saver.toggle() }
 
         // media keys: change the value, then show the pop-up
         function volumeUp(): void { System.setVolume(System.volume + 0.05); root.osd("volume") }

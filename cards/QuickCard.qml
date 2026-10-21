@@ -32,6 +32,13 @@ ColumnLayout {
                 color: Theme.dim
             }
         }
+        RoundButton {   // battery saver: filled while on
+            icon: "leaf"
+            hue: Theme.hue("mem")
+            filled: Saver.on
+            onClicked: Saver.toggle()
+            onRightClicked: card.settings("power")
+        }
         RoundButton { icon: "cog"; onClicked: card.openCard("settings"); onRightClicked: card.settings("look") }
         RoundButton { icon: "lock"; onClicked: { card.close(); System.lock() } onRightClicked: card.settings("power") }
         RoundButton { icon: "sleep"; onClicked: { card.close(); System.lock(); System.run("sleep 1; systemctl suspend") } onRightClicked: card.settings("power") }

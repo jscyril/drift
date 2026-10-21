@@ -45,6 +45,8 @@ usage: drift [command]
   mic mute               toggle microphone mute
   brightness up|down     change screen brightness
   updates                re-check for package updates
+  saver                  toggle battery saver (power-saver profile,
+                         25% brightness, bluetooth off; off restores)
 
   ipc <function> [args]  call any drift IPC function directly
   version | help
@@ -72,6 +74,7 @@ case "$cmd" in
     settings)    ipc settings "${1:-}" ;;
     toggle)      ipc toggle "${1:?usage: drift toggle <panel>}" ;;
     updates)     ipc updatesRefresh ;;
+    saver)       ipc batterySaver ;;
 
     volume)
         case "${1:-}" in
