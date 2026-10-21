@@ -201,10 +201,16 @@ Column {
                     Column {
                         required property var modelData
                         spacing: 3
-                        Row {
-                            spacing: 6
-                            Label { text: modelData.mount; width: 120; elide: Text.ElideMiddle }
-                            Label { text: Theme.bytes(modelData.used) + "/" + Theme.bytes(modelData.size); color: Theme.dim }
+                        Item {
+                            width: 256 - 2 * card.boxPad; height: sizes.height
+                            Label { text: modelData.mount; width: parent.width - sizes.width - 6; elide: Text.ElideMiddle }
+                            Row {
+                                id: sizes
+                                anchors.right: parent.right
+                                spacing: 6
+                                Label { text: Theme.bytes(modelData.used) + "/" + Theme.bytes(modelData.size); color: Theme.dim }
+                                Label { text: Theme.bytes(modelData.free) + " free"; color: Theme.hue("gpu") }
+                            }
                         }
                         Meter { value: modelData.used / modelData.size; ramp: "gpu"; segments: 30; segW: 6; segH: 8 }
                     }

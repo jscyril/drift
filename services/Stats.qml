@@ -30,7 +30,7 @@ Singleton {
     property real netPeak: 1             // auto-scale for net graphs
     property string load: ""
     property real uptime: 0
-    property var disks: []               // [{ mount, used, size }]
+    property var disks: []               // [{ mount, used, free, size }]; free = what you can write (df avail)
     property var procs: []               // [{ pid, name, cpu, mem }]
     property bool wantProcs: false       // set while the system card is open
 
@@ -147,12 +147,12 @@ Singleton {
     // disks: slow-changing
     Process {
         id: diskProc
-        command: ["sh", "-c", "df -B1 --output=target,used,size -x tmpfs -x devtmpfs -x efivarfs -x overlay | tail -n +2"]
+        command: ["sh", "-c", "df -B1 --output=target,used,avail,size -x tmpfs -x devtmpfs -x efivarfs -x overlay | tail -n +2"]
         stdout: StdioCollector {
             onStreamFinished: {
                 stats.disks = this.text.trim().split("\n").map(function(l) {
                     var f = l.trim().split(/\s+/)
-                    return { mount: f[0], used: Number(f[1]), size: Number(f[2]) }
+                    return { mount: f[0], used: Number(f[1]), free: Number(f[2]), size: Number(f[3]) }
                 }).filter(d => d.size > 1e9 && !d.mount.startsWith("/boot"))
             }
         }
