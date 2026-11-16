@@ -22,14 +22,15 @@ Row {
         font.pixelSize: clock.pixelSize
         renderType: Text.NativeRendering
         anchors.verticalCenter: parent.verticalCenter
-        // hard terminal blink
-        SequentialAnimation on opacity {
+        // hard terminal blink. A Timer, not a looping animation: a running
+        // animation keeps the whole bar redrawing every frame, even while it pauses.
+        property bool lit: true
+        opacity: lit ? 1 : 0.2
+        Timer {
+            interval: 1000; repeat: true
             running: !Config.opts.showSeconds && !System.lowPower
-            loops: Animation.Infinite
-            PropertyAction { value: 1 }
-            PauseAnimation { duration: 1000 }
-            PropertyAction { value: 0.2 }
-            PauseAnimation { duration: 1000 }
+            onTriggered: parent.lit = !parent.lit
+            onRunningChanged: if (!running) parent.lit = true
         }
     }
 

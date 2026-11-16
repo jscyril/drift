@@ -18,7 +18,7 @@ FloatingWindow {
 
     readonly property var groups: [
         { name: "personal", pages: [
-            { key: "look", file: "Look", label: "appearance", icon: "palette", hue: "gh", words: "color accent theme scheme matugen transparency crt scanline animation" },
+            { key: "look", file: "Look", label: "appearance", icon: "palette", hue: "gh", words: "color accent theme scheme matugen catppuccin darcula dracula gruvbox nord kitty gtk apps transparency crt scanline animation" },
             { key: "wallpaper", file: "Wallpaper", label: "wallpaper", icon: "image", hue: "time", words: "background image" },
             { key: "bar", file: "BarPage", label: "bar", icon: "dashboard", hue: "cpu", words: "modules height gap workspaces launcher arch vicinae" },
             { key: "clock", file: "Clock", label: "clock & weather", icon: "clock", hue: "temp", words: "time date 24 seconds weather location units celsius" },
@@ -28,7 +28,7 @@ FloatingWindow {
             { key: "network", file: "Network", label: "network", icon: "wifi-4", hue: "down", words: "wifi wireless ethernet internet password ssid" },
             { key: "bluetooth", file: "BluetoothPage", label: "bluetooth", icon: "bluetooth", hue: "mem", words: "pair device headphones" },
             { key: "sound", file: "Sound", label: "sound", icon: "speaker", hue: "gpu", words: "audio volume output input microphone speaker apps" },
-            { key: "displays", file: "Displays", label: "displays", icon: "monitors", hue: "cpu", words: "monitor screen resolution refresh scale rotate brightness" },
+            { key: "displays", file: "Displays", label: "displays", icon: "monitors", hue: "cpu", words: "monitor screen resolution refresh scale rotate brightness night light warm gammastep schedule" },
             { key: "power", file: "Power", label: "power", icon: "bolt", hue: "temp", words: "battery profile performance saver caffeine suspend shutdown" }
         ] },
         { name: "system", pages: [

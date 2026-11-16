@@ -32,11 +32,11 @@ Singleton {
     function setMicVolume(v) { if (hasMic) { source.audio.muted = false; source.audio.volume = Math.max(0, Math.min(1, v)) } }
     function toggleMicMute() { if (hasMic) source.audio.muted = !source.audio.muted }
 
-    // ── media: prefer a playing player ──
-    readonly property var player: {
-        var ps = Mpris.players.values
-        return ps.find(p => p.isPlaying) || ps[0] || null
-    }
+    // ── media: the pinned player, else a playing one ──
+    readonly property var players: Mpris.players.values
+    property var pinnedPlayer: null              // picked in the media card
+    readonly property var player: players.indexOf(pinnedPlayer) >= 0 ? pinnedPlayer
+        : players.find(p => p.isPlaying) || players[0] || null
 
     // ── power saver: slower polling, no idle animations ──
     readonly property bool lowPower: Config.opts.powerSaver === "on" || (Config.opts.powerSaver === "auto" && UPower.onBattery)
@@ -125,8 +125,46 @@ Singleton {
     // ── caffeine: islands inhibit idle while on ──
     property bool caffeine: false
 
+    // ── low battery: one warning each time it drops through 20, 10 and 5% ──
+    function batteryStep(pct) { return pct <= 5 ? 5 : pct <= 10 ? 10 : pct <= 20 ? 20 : 101 }
+    property int warnedAt: 101
+    readonly property bool discharging: hasBattery && UPower.onBattery
+    onDischargingChanged: warnedAt = 101
+    onBatteryPctChanged: {
+        var step = batteryStep(batteryPct)
+        if (!discharging || !Config.opts.lowBatteryWarn || step >= warnedAt) return
+        warnedAt = step
+        Quickshell.execDetached(["notify-send", "-a", "drift", "-u", step <= 10 ? "critical" : "normal", "-i", "battery-caution",
+            "battery at " + batteryPct + "%", step <= 5 ? "plug in now" : batterySecsLeft > 0 ? Theme.duration(batterySecsLeft) + " left" : "plug in soon"])
+    }
+    Component.onCompleted: console.assert(batteryStep(100) === 101 && batteryStep(20) === 20 && batteryStep(11) === 20
+        && batteryStep(10) === 10 && batteryStep(5) === 5 && batteryStep(0) === 5)
+
     // ── notifications ──
     property bool dnd: false
+    // focus mode: do not disturb for a while, or by the clock
+    property double dndUntil: 0                  // ms since epoch, 0 = no timer
+    function quiet(minutes) { dnd = true; dndUntil = Date.now() + minutes * 60000 }
+    onDndChanged: if (!dnd) dndUntil = 0
+    Timer {
+        interval: 15000
+        repeat: true
+        running: sys.dndUntil > 0
+        onTriggered: if (Date.now() >= sys.dndUntil) sys.dnd = false
+    }
+    SystemClock { id: clock; precision: SystemClock.Minutes }
+    readonly property bool dndWindow: {
+        var a = NightLight.mins(Config.opts.dndFrom), b = NightLight.mins(Config.opts.dndTo)
+        return a >= 0 && b >= 0 && NightLight.within(clock.hours * 60 + clock.minutes, a, b)
+    }
+    readonly property bool dndScheduled: Config.opts.dndSchedule
+    // like the night light: the schedule flips it at its two times, a manual toggle holds until the next one
+    function followDnd() { if (dndScheduled) dnd = dndWindow }
+    onDndWindowChanged: followDnd()
+    onDndScheduledChanged: followDnd()
+    readonly property string dndText: !dnd ? "alerts on"
+        : dndUntil > 0 ? "quiet until " + Qt.formatTime(new Date(dndUntil), "hh:mm")
+        : dndScheduled && dndWindow ? "quiet until " + Config.opts.dndTo : "silenced"
     readonly property var notifications: server.trackedNotifications.values.slice().reverse()
     signal notified(var n)
     function clearNotifications() { server.trackedNotifications.values.slice().forEach(n => n.dismiss()) }
@@ -145,7 +183,44 @@ Singleton {
         bodyMarkupSupported: false
         onNotification: n => {
             n.tracked = true
+            sys.remember(n)
             if (!sys.dnd) sys.notified(n)
+        }
+    }
+
+    // ── notification history: everything that arrived, kept after it is dismissed ──
+    property var history: []                     // newest first: [{ key, nid, app, icon, summary, body, time }]
+    readonly property int historyMax: 100
+    function same(e, nid, summary, body) { return e.nid === nid && e.summary === summary && e.body === body }
+    function remember(n) {
+        // a reload hands the waiting notifications over again: those are already in here
+        if (history.some(e => same(e, n.id, n.summary, n.body))) return
+        saveHistory([{ key: Date.now() + "-" + n.id, nid: n.id, app: n.appName, icon: n.appIcon || n.desktopEntry || n.appName,
+                       summary: n.summary, body: n.body, time: Date.now() }].concat(history).slice(0, historyMax))
+    }
+    // the notification behind a history entry, while it is still waiting to be dismissed
+    function liveOf(e) { return notifications.find(n => n.id === e.nid && n.summary === e.summary) || null }
+    function forget(e) {
+        var n = liveOf(e)
+        if (n) n.dismiss()
+        saveHistory(history.filter(x => x.key !== e.key))
+    }
+    function clearHistory() { clearNotifications(); saveHistory([]) }
+    function saveHistory(h) { history = h; historyFile.setText(JSON.stringify(h) + "\n") }
+    function ago(t) {
+        var s = Math.max(0, (Date.now() - t) / 1000)
+        return s < 60 ? "now" : s < 3600 ? Math.floor(s / 60) + "m" : s < 86400 ? Math.floor(s / 3600) + "h" : Math.floor(s / 86400) + "d"
+    }
+    FileView {
+        id: historyFile
+        path: Quickshell.env("HOME") + "/.config/drift/notifications.json"
+        printErrors: false
+        // anything that arrived before the file was read stays on top
+        onLoaded: {
+            try {
+                var old = JSON.parse(text()).filter(o => !sys.history.some(e => sys.same(e, o.nid, o.summary, o.body)))
+                sys.history = sys.history.concat(old).slice(0, sys.historyMax)
+            } catch (e) {}
         }
     }
 
@@ -157,4 +232,9 @@ Singleton {
     // lock screen lives in shell.qml; ask it directly (works however drift was launched)
     signal lockRequested()
     function lock() { lockRequested() }
+    // keybind cheatsheet lives in shell.qml too
+    signal keybindsRequested()
+    function toggleKeybinds() { keybindsRequested() }
+    // so do the other overlays: "wallpapers" | "themes" | "search" | "capture" | "session"
+    signal overlayRequested(string which)
 }

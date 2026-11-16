@@ -59,6 +59,7 @@ Pixel fonts, staircase corners, neon gradient meters, and colors pulled live fro
 - **Session menu**: lock, screen off (monitors off without sleeping), sleep, log out, reboot, power off. Destructive actions need a second press.
 - **Capture menu**: region / screen / window screenshots (saved + copied, optional swappy edit, delay) and region / screen recording via gpu-screen-recorder.
 - **Clipboard history**: cliphist with search, keyboard navigation and image previews.
+- **Keybind cheatsheet**: every niri + shell bind, grouped and searchable, read live from your niri config so it never drifts out of date.
 - **Volume / mic / brightness pop-ups** for the media keys.
 - **Lock screen** (ext-session-lock + PAM): your wallpaper crushed to 160×90 and scaled up into pixel art.
 
@@ -187,9 +188,14 @@ drift lock              lock the screen
 drift session           session menu (lock / screen off / sleep / log out / reboot / power off)
 drift capture           screenshot & recording menu
 drift clipboard         clipboard history
+drift keybinds          keybind cheatsheet (niri + shell binds)
 drift settings [page]   settings app: look wallpaper bar clock notifications network
                         bluetooth sound displays power data about
-drift toggle <panel>    bar panel: quick media today system screen github updates todo
+drift toggle <panel>    bar panel: quick media today system screen github updates todo notifs
+drift wallpapers        wallpaper picker: filmstrip, live color preview; Tab searches wallhaven.cc
+drift search            web search box: google, youtube, or claude / chatgpt / gemini
+drift themes            theme picker: catppuccin, darcula, dracula, gruvbox, nord, ...
+drift nightlight        toggle the night light (needs gammastep)
 
 drift volume up|down|mute
 drift mic mute
@@ -210,6 +216,7 @@ binds {
     Mod+Alt+V     { spawn "drift" "clipboard"; }
     Print         { spawn "drift" "capture"; }
     Mod+Shift+X   { spawn "drift" "capture"; }
+    Mod+F1        { spawn "drift" "keybinds"; }
 
     XF86AudioRaiseVolume  allow-when-locked=true { spawn "drift" "volume" "up"; }
     XF86AudioLowerVolume  allow-when-locked=true { spawn "drift" "volume" "down"; }
@@ -219,6 +226,8 @@ binds {
     XF86MonBrightnessDown allow-when-locked=true { spawn "drift" "brightness" "down"; }
 }
 ```
+
+The cheatsheet (`drift keybinds`, or the keyboard button in the control panel) reads your `binds { }` block directly: any bind with a `hotkey-overlay-title="..."` shows up, grouped under the nearest `// #"Group Name"` comment above it (niri already wants those titles for its own overlay, so there's nothing extra to maintain).
 
 For hypridle, set `lock_cmd = drift lock` (and use it for `before_sleep_cmd` too).
 
@@ -291,9 +300,12 @@ install.sh          installer for git clones
 packaging/arch/     PKGBUILD (drift-shell-git)
 Bar.qml             the bar + drop-down panels
 SessionMenu.qml     CaptureMenu.qml  ClipboardMenu.qml  Osd.qml
+WallpaperPicker.qml ThemePicker.qml  (preset themes live in services/themes.js)
+SearchMenu.qml      DesktopMenu.qml  (right-click the bare desktop; drawn by WallpaperLayer.qml)
 Lock.qml            session lock + PAM;  LockContent.qml is what it draws
 services/           singletons: Config, Theme, Niri, System, Stats, ScreenTime,
-                    GitHub, Weather, Updates, Privacy, Capture
+                    GitHub, Weather, Updates, Privacy, Capture, NightLight,
+                    AppTheme (kitty + GTK colors), Cava (audio levels)
 components/         pixel widgets: PixelBox, Meter, Graph, Heatmap, Switch, Slider, ...
 cards/              the drop-down panels
 settings/           the settings window and its pages
@@ -301,7 +313,15 @@ settings/           the settings window and its pages
 
 ## Known limitations
 
-- **Wallpaper and night light** currently go through Noctalia's `noctalia msg` (wallpaper get/set, night light). Without it, set `colorMode` to `custom`, or swap the commands in `services/Theme.qml` (wallpaper) and `settings/pages/Displays.qml` (night light) for your own tools.
+- **Night light** needs `gammastep` installed; without it the tile and settings say so. The tint switches on and off at once, with no fade.
+- **Theming other apps** (appearance → theme apps too):
+  - kitty, GTK 3/4 and niri (borders, focus ring) are hooked up automatically with one include line each. kitty and niri recolor live; GTK apps when they next start.
+  - The rest get a theme file named `drift` that you select once in the app; after that it follows along:
+    Qt apps: pick `drift` under qt6ct → appearance → color scheme. KDE apps: `plasma-apply-colorscheme Drift`.
+    vicinae: `vicinae theme set drift`. btop: `color_theme = "drift"` in btop.conf. Neovim: `:colorscheme drift`.
+  - Firefox and VS Code are not themed.
+- The wallpaper picker's wallhaven search sends only your search words to wallhaven.cc, and only shows safe-for-work results.
+- The media card's visualizer needs `cava`; without it the card just has no bars.
 - Display changes made in settings apply at runtime only. Use **copy as KDL** to keep them in niri's config.
 - The temperature sensor is AMD `k10temp` and the GPU meter reads the AMD iGPU's `gpu_busy_percent`. Other hardware will show 0 until those paths are adjusted in `services/Stats.qml`.
 - Updates use `paru`; swap in `yay` in `services/Updates.qml` if needed.

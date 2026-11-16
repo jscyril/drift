@@ -3,11 +3,10 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import "themes.js" as Themes
 
 // Pixel look: Departure Mono, stepped corners, neon meter ramps.
-// Chrome colors come from matugen (wallpaper or custom accent).
-// shortcut: the wallpaper path is polled from Noctalia; once drift owns the
-// wallpaper, read it from drift's own state instead.
+// Chrome colors come from matugen (wallpaper or custom accent) or a preset theme (themes.js).
 Singleton {
     id: theme
 
@@ -98,7 +97,8 @@ Singleton {
         "webcam": 0xf05a0, "screen-share": 0xf1483, "package-up": 0xf03d5, "clipboard": 0xf0a38,
         "unlock": 0xf0fc6, "account-circle": 0xf0009, "enter": 0xf0734, "pencil": 0xf03eb, "radar": 0xf0437, "rotate": 0xf0467, "cpu64": 0xf0ee0, "disk": 0xf02ca,
         "account": 0xf0004, "plug": 0xf06a5, "eye": 0xf0208,
-        "checkbox-blank": 0xf0131, "checkbox-marked": 0xf0132, "todo": 0xf0756, "calendar": 0xf00ed
+        "shuffle": 0xf049d, "repeat": 0xf0456, "repeat-once": 0xf0458,
+        "checkbox-blank": 0xf0131, "checkbox-marked": 0xf0132, "todo": 0xf0756, "notes": 0xf09ed, "calendar": 0xf00ed
     })
     function glyph(name) {
         var c = glyphs[name]
@@ -128,18 +128,40 @@ Singleton {
         return h > 0 ? h + "h" + String(m).padStart(2, "0") : m + "m"
     }
 
-    // ── palette generation ──
+    // ── palette ──
+    // The settled palette as plain hex strings ({ surface, bg, ..., ansi[16] }).
+    // The color properties above animate toward it; themed apps read this.
+    property var palette: null
+    property var generated: null                       // the last palette matugen made
+    function show(p) { Themes.keys.forEach(k => theme[k] = p[k]) }   // draw it without keeping it (picker previews)
+    function apply(p) { palette = p; show(p) }
+    function revert() { if (palette) show(palette) }                // drop a preview
+
+    readonly property string presetKey: Config.opts.colorMode === "theme" ? Config.opts.themeName : ""
+    onPresetKeyChanged: refresh()
+    Component.onCompleted: { Themes.selfTest(); if (presetKey !== "") refresh() }
+    function refresh() {
+        var t = Themes.get(presetKey)
+        if (t) apply(t)
+        else regen.restart()
+    }
+
     property string wallpaper: ""
+    property string previewWallpaper: ""               // the wallpaper picker's highlighted image: colors follow it, nothing is saved
     function setWallpaper(path) {
-        Quickshell.execDetached(["noctalia", "msg", "wallpaper-set", path])
+        previewWallpaper = ""
         wallpaper = path
+        wallpaperFile.setText(path + "\n")
+        regen.restart()                                // even if the colors were already previewed from this image
     }
     readonly property var matugenCmd: {
         var tail = ["--json", "hex", "--dry-run", "-m", "dark", "-t", Config.opts.scheme]
+        if (Config.opts.colorMode === "theme") return []
         if (Config.opts.colorMode === "custom")
             return ["matugen", "color", "hex", Config.opts.customAccent].concat(tail)
-        if (wallpaper === "") return []
-        return ["matugen", "image", wallpaper, "--prefer", "saturation", "--fallback-color", "#8aa4c8"].concat(tail)
+        var img = previewWallpaper || wallpaper
+        if (img === "") return []
+        return ["matugen", "image", img, "--prefer", "saturation", "--fallback-color", "#8aa4c8"].concat(tail)
     }
     onMatugenCmdChanged: regen.restart()
     Timer {
@@ -148,23 +170,18 @@ Singleton {
         onTriggered: if (theme.matugenCmd.length > 0) { matugenProc.running = false; matugenProc.running = true }
     }
 
-    Process {
-        id: wallpaperProc
-        command: ["noctalia", "msg", "wallpaper-get"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var p = this.text.trim()
-                if (p.charAt(0) === "/") theme.wallpaper = p
-            }
+    // the current wallpaper path, remembered across restarts
+    FileView {
+        id: wallpaperFile
+        path: Quickshell.env("HOME") + "/.config/drift/wallpaper"
+        onLoaded: {
+            var p = text().trim()
+            if (p.charAt(0) === "/") theme.wallpaper = p
+            theme.wallpaperLoaded = true
         }
+        onLoadFailed: theme.wallpaperLoaded = true
     }
-    Timer {
-        interval: System.lowPower ? 60000 : 5000
-        running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: wallpaperProc.running = true
-    }
+    property bool wallpaperLoaded: false
 
     Process {
         id: matugenProc
@@ -174,16 +191,16 @@ Singleton {
                 try {
                     var c = JSON.parse(this.text).colors
                     var get = n => c[n].dark.color
-                    theme.surface = get("surface_container_lowest")
-                    theme.bg = get("surface")
-                    theme.raised = get("surface_container_high")
-                    theme.fg = get("on_surface")
-                    theme.dim = get("on_surface_variant")
-                    theme.accent = get("primary")
-                    theme.accentText = get("on_primary")
-                    theme.accent2 = get("tertiary")
-                    theme.accent3 = get("secondary")
-                    theme.outline = get("outline_variant")
+                    var p = Themes.withAnsi({
+                        surface: get("surface_container_lowest"), bg: get("surface"), raised: get("surface_container_high"),
+                        fg: get("on_surface"), dim: get("on_surface_variant"),
+                        accent: get("primary"), accentText: get("on_primary"),
+                        accent2: get("tertiary"), accent3: get("secondary"), outline: get("outline_variant")
+                    })
+                    if (theme.presetKey !== "") return          // a preset was picked while matugen ran
+                    if (theme.previewWallpaper !== "") return theme.show(p)
+                    theme.generated = p
+                    theme.apply(p)
                 } catch (e) {
                     console.warn("drift: matugen output unreadable:", e)
                 }

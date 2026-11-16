@@ -53,6 +53,13 @@ Column {
     }
 
     Section {
+        visible: System.hasBattery
+        title: "warnings"
+        hue: Theme.ramp("temp", 1)
+        Toggle { key: "lowBatteryWarn"; title: "low battery warnings"; hint: "a notification at 20%, 10% and 5%" }
+    }
+
+    Section {
         title: "power profile"
         hue: Theme.hue("cpu")
         Row {

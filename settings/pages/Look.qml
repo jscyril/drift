@@ -1,6 +1,7 @@
 import QtQuick
 import "../../services"
 import "../../components"
+import "../../services/themes.js" as Themes
 
 Column {
     id: pg
@@ -10,7 +11,7 @@ Column {
     // live palette: what matugen pulled out of the wallpaper right now
     Section {
         title: "palette"
-        badge: o.colorMode === "wallpaper" ? "from wallpaper" : "custom"
+        badge: o.colorMode === "wallpaper" ? "from wallpaper" : o.colorMode === "theme" ? o.themeName : "custom"
         Row {
             spacing: 6
             Repeater {
@@ -44,12 +45,36 @@ Column {
         title: "colors"
         Setting {
             title: "colors from"
-            hint: "wallpaper, or your own accent"
+            hint: "wallpaper, your own accent, or a ready-made theme"
             Segmented {
-                options: [{ label: "wallpaper", value: "wallpaper" }, { label: "custom", value: "custom" }]
+                options: [{ label: "wallpaper", value: "wallpaper" }, { label: "custom", value: "custom" }, { label: "theme", value: "theme" }]
                 value: pg.o.colorMode
                 onPicked: v => pg.o.colorMode = v
             }
+        }
+        Setting {
+            visible: pg.o.colorMode === "theme"
+            title: "theme"
+            below: true
+            Flow {
+                width: parent.width
+                spacing: 6
+                Repeater {
+                    model: Themes.list
+                    Chip {
+                        required property var modelData
+                        text: modelData.name
+                        on: pg.o.themeName === modelData.key
+                        onClicked: pg.o.themeName = modelData.key
+                    }
+                }
+                Chip { text: "open picker"; icon: "palette"; onClicked: System.overlayRequested("themes") }
+            }
+        }
+        Toggle {
+            key: "themeApps"
+            title: "theme apps too"
+            hint: "kitty and gtk apps (files) follow the palette. adds one include line to kitty.conf and gtk.css; off gives them their own colors back"
         }
         Setting {
             visible: pg.o.colorMode === "custom"
@@ -78,6 +103,7 @@ Column {
             }
         }
         Setting {
+            visible: pg.o.colorMode !== "theme"
             title: "palette style"
             hint: "how hard matugen pushes the color"
             below: true

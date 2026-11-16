@@ -18,7 +18,8 @@ Item {
         if (!n) return ""
         if (n.image) return n.image
         var ic = n.appIcon || ""
-        if (ic.startsWith("/") || ic.startsWith("file:")) return ic
+        if (ic.startsWith("/")) return "file://" + ic     // a bare path would be looked up inside Qt's resources
+        if (ic.startsWith("file:")) return ic
         return Theme.appIcon(ic || n.desktopEntry || n.appName)
     }
 
@@ -65,6 +66,22 @@ Item {
                 wrapMode: Text.Wrap
                 maximumLineCount: item.bodyLines
                 color: Theme.dim
+            }
+            // the notification's own buttons (reply, mark read, ...)
+            Flow {
+                width: parent.width
+                spacing: 6
+                topPadding: 3
+                visible: acts.count > 0
+                Repeater {
+                    id: acts
+                    model: item.notif ? item.notif.actions.filter(a => a.identifier !== "default" && a.text !== "") : []
+                    Chip {
+                        required property var modelData
+                        text: modelData.text.toLowerCase()
+                        onClicked: { modelData.invoke(); item.activated() }
+                    }
+                }
             }
         }
 

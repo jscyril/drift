@@ -56,6 +56,17 @@ Column {
             hint: "keep history, skip popups"
             Switch { checked: System.dnd; onToggled: v => System.dnd = v }
         }
+        Toggle { key: "dndSchedule"; title: "quiet hours"; hint: "do not disturb by the clock; the notification center also has 30m / 1h / 2h" }
+        Setting {
+            visible: pg.o.dndSchedule
+            title: "from / until"
+            hint: "24-hour HH:MM; may run past midnight"
+            Row {
+                spacing: 6
+                Field { width: 70; text: pg.o.dndFrom; placeholder: "22:00"; onCommitted: t => { if (NightLight.mins(t.trim()) >= 0) pg.o.dndFrom = t.trim() } }
+                Field { width: 70; text: pg.o.dndTo; placeholder: "08:00"; onCommitted: t => { if (NightLight.mins(t.trim()) >= 0) pg.o.dndTo = t.trim() } }
+            }
+        }
         Setting {
             title: "test"
             Chip { text: "send one"; icon: "bell-ring"; onClicked: Quickshell.execDetached(["notify-send", "-a", "drift", "hello from drift", "this is what a notification looks like"]) }

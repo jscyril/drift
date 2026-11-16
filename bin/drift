@@ -36,15 +36,20 @@ usage: drift [command]
   session                session menu (lock / sleep / reboot / power off)
   capture                screenshot & recording menu
   clipboard              clipboard history
+  keybinds               keybind cheatsheet (niri + shell binds)
+  wallpapers             wallpaper picker (filmstrip with live colors)
+  themes                 theme picker (catppuccin, darcula, gruvbox, ...)
+  search                 web search box (google, youtube, claude/chatgpt/gemini)
   settings [page]        settings app: look wallpaper bar clock notifications
                          network bluetooth sound displays power data about
   toggle <panel>         open/close a bar panel: quick media today system
-                         screen github updates todo
+                         screen github updates todo notes notifs
 
   volume up|down|mute    change volume (shows the pop-up)
   mic mute               toggle microphone mute
   brightness up|down     change screen brightness
   updates                re-check for package updates
+  nightlight             toggle the night light
   saver                  toggle battery saver (power-saver profile,
                          25% brightness, bluetooth off; off restores)
 
@@ -70,7 +75,7 @@ case "$cmd" in
     status)      running && echo "running" || { echo "stopped"; exit 1; } ;;
     logs|log)    "${QS[@]}" log "$@" ;;
 
-    lock|session|capture|clipboard) ipc "$cmd" ;;
+    lock|session|capture|clipboard|keybinds|wallpapers|themes|search|nightlight) ipc "$cmd" ;;
     settings)    ipc settings "${1:-}" ;;
     toggle)      ipc toggle "${1:?usage: drift toggle <panel>}" ;;
     updates)     ipc updatesRefresh ;;

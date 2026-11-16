@@ -183,10 +183,38 @@ Column {
     Section {
         title: "night light"
         hue: Theme.hue("temp")
+        badge: !NightLight.available ? "gammastep missing" : NightLight.on ? "on" : "off"
+        Label {
+            visible: !NightLight.available
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: Theme.ramp("temp", 1)
+            text: "night light uses gammastep, which isn't installed. install it (pacman -S gammastep) and reload drift."
+        }
+        Toggle { key: "nightLight"; title: "warm the screen"; hint: "less blue light in the evening" }
         Setting {
-            title: "warm the screen"
-            hint: "uses noctalia's night light"
-            Chip { text: "toggle"; icon: "weather-night"; onClicked: Quickshell.execDetached(["noctalia", "msg", "nightlight-force-toggle"]) }
+            title: "warmth"
+            hint: "lower is warmer"
+            below: true
+            MiniSlider {
+                width: parent.width
+                from: 2500; to: 6000; step: 100
+                value: Config.opts.nightTemp
+                ramp: "temp"
+                format: v => Math.round(v) + "K"
+                onMoved: v => Config.opts.nightTemp = Math.round(v)
+            }
+        }
+        Toggle { key: "nightSchedule"; title: "schedule"; hint: "switch on and off by the clock" }
+        Setting {
+            visible: Config.opts.nightSchedule
+            title: "from / until"
+            hint: "24-hour HH:MM; may run past midnight"
+            Row {
+                spacing: 6
+                Field { width: 70; text: Config.opts.nightFrom; placeholder: "20:00"; onCommitted: t => { if (NightLight.mins(t.trim()) >= 0) Config.opts.nightFrom = t.trim() } }
+                Field { width: 70; text: Config.opts.nightTo; placeholder: "07:00"; onCommitted: t => { if (NightLight.mins(t.trim()) >= 0) Config.opts.nightTo = t.trim() } }
+            }
         }
     }
 }

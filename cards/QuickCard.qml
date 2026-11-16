@@ -21,6 +21,7 @@ ColumnLayout {
         spacing: 4
         Column {
             Layout.fillWidth: true
+            Layout.minimumWidth: 0
             spacing: 2
             Label {
                 text: System.hasBattery ? System.batteryPct + "%" : Qt.formatDate(new Date(), "dddd").toLowerCase()
@@ -28,6 +29,8 @@ ColumnLayout {
                 color: Theme.ramp("cpu", System.hasBattery ? (100 - System.batteryPct) / 100 * 0.9 : 0)
             }
             Label {
+                width: parent.width
+                wrapMode: Text.Wrap
                 text: (System.hasBattery ? System.batteryPowerText + (System.batterySecsLeft > 0 ? " · " + Theme.duration(System.batterySecsLeft) + (UPower.onBattery ? " left" : " to full") : "") + " · " : "") + "up " + Theme.duration(Stats.uptime)
                 color: Theme.dim
             }
@@ -39,6 +42,7 @@ ColumnLayout {
             onClicked: Saver.toggle()
             onRightClicked: card.settings("power")
         }
+        RoundButton { icon: "keyboard"; onClicked: { card.close(); System.toggleKeybinds() } }
         RoundButton { icon: "cog"; onClicked: card.openCard("settings"); onRightClicked: card.settings("look") }
         RoundButton { icon: "lock"; onClicked: { card.close(); System.lock() } onRightClicked: card.settings("power") }
         RoundButton { icon: "sleep"; onClicked: { card.close(); System.lock(); System.run("sleep 1; systemctl suspend") } onRightClicked: card.settings("power") }
@@ -109,7 +113,7 @@ ColumnLayout {
             hue: Theme.accent2
             icon: System.dnd ? "bell-off" : "bell"
             title: "do not disturb"
-            subtitle: System.dnd ? "silenced" : "alerts on"
+            subtitle: System.dndText
             onClicked: System.dnd = !System.dnd
             onRightClicked: card.settings("notifications")
         }
@@ -122,6 +126,19 @@ ColumnLayout {
             subtitle: System.caffeine ? "staying awake" : "off"
             onClicked: System.caffeine = !System.caffeine
             onRightClicked: card.settings("power")
+        }
+        Tile {
+            Layout.fillWidth: true
+            Layout.columnSpan: 2
+            on: NightLight.on && NightLight.available
+            hue: Theme.hue("temp")
+            icon: "weather-night"
+            title: "night light"
+            subtitle: !NightLight.available ? "needs gammastep installed"
+                : NightLight.on ? Config.opts.nightTemp + "K" + (NightLight.scheduled ? " · until " + Config.opts.nightTo : "")
+                : NightLight.scheduled ? "comes on at " + Config.opts.nightFrom : "off"
+            onClicked: NightLight.toggle()
+            onRightClicked: card.settings("displays")
         }
     }
 

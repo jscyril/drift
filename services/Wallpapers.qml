@@ -18,7 +18,13 @@ Singleton {
         running: true
         command: ["find", "-L", wp.dir, "-maxdepth", "2", "-type", "f", "(", "-iname", "*.png", "-o", "-iname", "*.jpg",
                   "-o", "-iname", "*.jpeg", "-o", "-iname", "*.webp", ")"]
-        stdout: StdioCollector { onStreamFinished: wp.files = this.text.split("\n").filter(l => l !== "").sort() }
+        stdout: StdioCollector {
+            onStreamFinished: {
+                wp.files = this.text.split("\n").filter(l => l !== "").sort()
+                // nothing remembered yet (first run): pick one from the library
+                if (Theme.wallpaperLoaded && Theme.wallpaper === "" && wp.files.length) wp.random()
+            }
+        }
     }
 
     // a manual pick restarts the countdown

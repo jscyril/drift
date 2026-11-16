@@ -27,7 +27,7 @@ Scope {
 
     readonly property var titles: ({
         quick: "control", media: "now playing", today: "today",
-        notif: "notification", system: "system", screen: "screen time", github: "github", updates: "updates", todo: "to-do"
+        notif: "notification", notifs: "notifications", system: "system", screen: "screen time", github: "github", updates: "updates", todo: "to-do", notes: "notes"
     })
 
     function open(name, fromItem) {
@@ -66,6 +66,8 @@ Scope {
 
     // sample processes only while the system card is open
     Binding { target: Stats; property: "wantProcs"; value: true; when: bar.card === "system" }
+    // and listen to the audio only while the media card is open
+    Binding { target: Cava; property: "wanted"; value: true; when: bar.card === "media" }
 
     // reserves the strip the bar sits in
     PanelWindow {
@@ -391,6 +393,16 @@ Scope {
                     }
                 }
 
+                Module {
+                    id: notesMod
+                    visible: Config.opts.showNotes
+                    anchors.verticalCenter: parent.verticalCenter
+                    hue: Theme.accent2
+                    active: bar.card === "notes"
+                    onClicked: bar.open("notes", notesMod)
+                    Icon { name: "notes"; size: 14; color: notesMod.hue; anchors.verticalCenter: parent.verticalCenter }
+                }
+
                 Sep {}
 
                 Module {
@@ -416,11 +428,12 @@ Scope {
 
                 Module {
                     id: bellMod
-                    visible: System.notifications.length > 0 || System.dnd
+                    visible: System.history.length > 0 || System.notifications.length > 0 || System.dnd
                     anchors.verticalCenter: parent.verticalCenter
                     hue: Theme.accent2
-                    active: bar.card === "quick"
-                    onClicked: bar.open("quick", bellMod)
+                    active: bar.card === "notifs"
+                    onClicked: bar.open("notifs", bellMod)
+                    onRightClicked: System.dnd = !System.dnd
                     Row {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 4
@@ -558,9 +571,14 @@ Scope {
             visible: reveal > 0.01 && bar.shownCard !== ""
             x: Math.round(Math.max(edge, Math.min(win.width - edge - width, bar.anchorX - width / 2)))
             y: bar.m + bar.h + 6
+            // already open: glide to the next module and ease to the new size instead of jumping
+            Behavior on x { enabled: drop.visible; NumberAnimation { duration: Theme.dur(280); easing.type: Easing.OutCubic } }
             width: wantW
+            Behavior on width { enabled: drop.visible; NumberAnimation { duration: Theme.dur(280); easing.type: Easing.OutCubic } }
+            property real h: wantH
+            Behavior on h { enabled: drop.visible; NumberAnimation { duration: Theme.dur(280); easing.type: Easing.OutCubic } }
             // reveal in 8px steps — blocky on purpose
-            height: Math.max(8, Math.round(wantH * reveal / 8) * 8)
+            height: Math.max(8, Math.round(h * reveal / 8) * 8)
             step: 3
             fill: Theme.surface   // opaque: busy windows behind would bleed through
             stroke: Theme.alpha(Theme.accent, 0.7)
@@ -589,13 +607,17 @@ Scope {
                 Loader {
                     id: content
                     x: drop.pad - 1
-                    y: drop.pad + 3
+                    y: drop.pad + 3 + Math.round((1 - opacity) * 8)   // rises into place as it fades in
                     active: bar.shownCard !== ""
-                    opacity: drop.reveal > 0.6 ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: Theme.dur(180) } }
+                    property real show: drop.reveal > 0.6 ? 1 : 0
+                    Behavior on show { NumberAnimation { duration: Theme.dur(180) } }
+                    property real pop: 1                               // re-fades when the card is swapped while open
+                    opacity: show * pop
+                    onLoaded: popIn.restart()
+                    NumberAnimation { id: popIn; target: content; property: "pop"; from: 0; to: 1; duration: Theme.dur(240); easing.type: Easing.OutCubic }
                     sourceComponent: ({ quick: quickCard, media: mediaCard, today: todayCard,
                                         notif: notifCard, system: systemCard, screen: screenCard, github: githubCard,
-                                        updates: updatesCard, todo: todoCard })[bar.shownCard] || null
+                                        updates: updatesCard, todo: todoCard, notes: notesCard, notifs: notifsCard })[bar.shownCard] || null
                 }
             }
         }
@@ -605,6 +627,7 @@ Scope {
             visible: drop.visible
             x: Math.round(Math.max(drop.x + 12, Math.min(drop.x + drop.width - 14, bar.anchorX - 1)))
             y: bar.m + bar.h
+            Behavior on x { enabled: drop.visible; NumberAnimation { duration: Theme.dur(280); easing.type: Easing.OutCubic } }
             width: 2; height: 6
             color: Theme.alpha(Theme.accent, 0.7)
         }
@@ -617,6 +640,8 @@ Scope {
         Component { id: githubCard; GithubCard { onClose: bar.close() } }
         Component { id: updatesCard; UpdatesCard { onClose: bar.close() } }
         Component { id: todoCard; TodoCard {} }
+        Component { id: notesCard; NotesCard {} }
+        Component { id: notifsCard; NotifCenter { onClose: bar.close() } }
         Component {
             id: notifCard
             NotifItem {

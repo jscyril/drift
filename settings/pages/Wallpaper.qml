@@ -4,8 +4,8 @@ import Quickshell.Io
 import "../../services"
 import "../../components"
 
-// Wallpaper grid from a folder. Setting goes through noctalia (it still
-// draws the wallpaper); colors follow automatically.
+// Wallpaper grid from a folder. drift draws the pick (WallpaperLayer.qml);
+// colors follow automatically.
 Column {
     id: pg
     spacing: 18
@@ -33,6 +33,7 @@ Column {
                 Label { width: parent.width; text: Theme.wallpaper; elide: Text.ElideMiddle; color: Theme.dim }
                 Row {
                     spacing: 6
+                    Chip { text: "picker"; icon: "image"; onClicked: System.overlayRequested("wallpapers") }
                     Chip { text: "random"; icon: "refresh"; onClicked: Wallpapers.random() }
                     Chip { text: "previous"; icon: "left"; onClicked: Wallpapers.step(-1) }
                     Chip { text: "next"; icon: "right"; onClicked: Wallpapers.step(1) }

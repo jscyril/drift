@@ -9,9 +9,15 @@ ShellRoot {
     id: root
     // singletons start on first use; the wallpaper rotation must run from launch
     readonly property var wallpapers: Wallpapers
+    readonly property var appTheme: AppTheme       // themes kitty / GTK when the palette changes
+    readonly property var nightLight: NightLight   // keeps the schedule
     Variants {
         model: Quickshell.screens
         Bar {}
+    }
+    Variants {
+        model: Quickshell.screens
+        WallpaperLayer {}
     }
     Variants {
         model: Quickshell.screens
@@ -36,6 +42,16 @@ ShellRoot {
     LazyLoader { id: clipLoader; ClipboardMenu { onClose: clipLoader.active = false } }
     LazyLoader { id: capLoader; CaptureMenu { onClose: capLoader.active = false } }
 
+    // keybind cheatsheet (Mod+F1, also the keyboard button in the control panel)
+    LazyLoader { id: keybindsLoader; KeybindsMenu { onClose: keybindsLoader.active = false } }
+    function toggleKeybinds() { keybindsLoader.active = !keybindsLoader.active }
+
+    // wallpaper and theme pickers
+    LazyLoader { id: wallLoader; WallpaperPicker { onClose: wallLoader.active = false } }
+    LazyLoader { id: themeLoader; ThemePicker { onClose: themeLoader.active = false } }
+    // web search box
+    LazyLoader { id: searchLoader; SearchMenu { onClose: searchLoader.active = false } }
+
     // lock screen: always present so locking is instant
     Lock { id: lockScreen }
 
@@ -48,6 +64,11 @@ ShellRoot {
     Connections {
         target: System
         function onLockRequested() { lockScreen.lock() }
+        function onKeybindsRequested() { root.toggleKeybinds() }
+        function onOverlayRequested(which) {
+            var l = ({ wallpapers: wallLoader, themes: themeLoader, search: searchLoader, capture: capLoader, session: session })[which]
+            if (l) l.active = !l.active
+        }
         function onOpenSettings(page) {
             settings.active = true
             if (page !== "") settings.item.page = page
@@ -65,6 +86,11 @@ ShellRoot {
         function session(): void { session.active = !session.active }
         function clipboard(): void { clipLoader.active = !clipLoader.active }
         function capture(): void { capLoader.active = !capLoader.active }
+        function keybinds(): void { root.toggleKeybinds() }
+        function wallpapers(): void { wallLoader.active = !wallLoader.active }
+        function themes(): void { themeLoader.active = !themeLoader.active }
+        function search(): void { searchLoader.active = !searchLoader.active }
+        function nightlight(): void { NightLight.toggle() }
         function lock(): void { lockScreen.lock() }
         function updatesRefresh(): void { Updates.refresh() }
         function batterySaver(): void { Saver.toggle() }

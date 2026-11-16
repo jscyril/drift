@@ -56,6 +56,13 @@ Item {
             font.pixelSize: Theme.fsBig
             color: Theme.accent2
         }
+        Row {
+            visible: Weather.ready
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: 8
+            Icon { name: Weather.icon; size: 16; color: Theme.hue("temp"); anchors.verticalCenter: parent.verticalCenter }
+            Label { text: Weather.temp(Weather.tempC) + " · " + Weather.desc.toLowerCase() + (Weather.area ? " · " + Weather.area.toLowerCase() : ""); color: Theme.dim }
+        }
         Item { width: 1; height: 30 }
 
         Label {
@@ -137,6 +144,12 @@ Item {
             visible: System.hasBattery
             spacing: 8
             BatteryPill { anchors.verticalCenter: parent.verticalCenter }
+        }
+        Row {
+            visible: System.notifications.length > 0   // count only, never the contents
+            spacing: 8
+            Icon { name: "bell-ring"; size: 14; color: Theme.hue("gh"); anchors.verticalCenter: parent.verticalCenter }
+            Label { text: System.notifications.length + (System.notifications.length === 1 ? " notification" : " notifications"); color: Theme.dim }
         }
         Row {
             visible: !!System.player && System.player.trackTitle !== ""

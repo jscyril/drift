@@ -34,9 +34,12 @@ Column {
         title: Quickshell.env("USER") + "@" + (pg.info.host || "")
         hue: Theme.hue("mem")
         Row {
+            width: parent.width
             spacing: 24
             Icon { name: "arch"; size: 120; color: Theme.accent; anchors.verticalCenter: parent.verticalCenter }
             Column {
+                id: kv
+                width: parent.width - 120 - 24
                 spacing: 5
                 Repeater {
                     model: [
@@ -50,7 +53,7 @@ Column {
                         required property int index
                         spacing: 8
                         Label { width: 80; text: modelData[0]; color: Theme.ramp("gh", 0.3 + 0.7 * index / 10); font.bold: true }
-                        Label { width: 420; text: modelData[1] || "-" }
+                        Label { width: kv.width - 88; text: modelData[1] || "-"; wrapMode: Text.Wrap }
                     }
                 }
                 Row {

@@ -27,12 +27,13 @@ Item {
         height: fx.height
         x: -10
         color: Theme.alpha(Theme.accent, 0.35)
-        SequentialAnimation on x {
+        // Timer between sweeps (not a PauseAnimation) so the bar is idle in between
+        Timer {
+            interval: 13500; repeat: true
             running: Config.opts.scanlines && fx.width > 0 && !System.lowPower
-            loops: Animation.Infinite
-            PauseAnimation { duration: 9000 }
-            NumberAnimation { from: -10; to: fx.width + 10; duration: 4500; easing.type: Easing.InOutQuad }
+            onTriggered: beamSweep.restart()
         }
+        NumberAnimation on x { id: beamSweep; running: false; from: -10; to: fx.width + 10; duration: 4500; easing.type: Easing.InOutQuad }
     }
 
     // comet: a head with a trail of fading pixel blocks

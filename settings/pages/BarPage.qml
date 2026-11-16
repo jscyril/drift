@@ -53,6 +53,7 @@ Column {
         Toggle { key: "showGithub"; title: "github heatmap" }
         Toggle { key: "showMedia"; title: "now playing" }
         Toggle { key: "showTodo"; title: "to-do list" }
+        Toggle { key: "showNotes"; title: "quick notes" }
         Toggle { key: "todoNotify"; title: "to-do reminders"; hint: "a notification at a task's time, and a 9:00 summary of what's due" }
         Toggle { key: "todoGoogle"; title: "sync to-do with google tasks"; hint: "your default list; needs ~/.config/drift/google-client.json (see README)" }
     }
